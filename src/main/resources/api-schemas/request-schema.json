@@ -1,0 +1,50 @@
+{
+    "title": "Request",
+    "description": "Fraud evaluation request for transaction",
+    "type": "object",
+    "properties": {
+        "debtorCreditCardNumber": {
+            "description": "Credit card used to initiate a transaction",
+            "type": "string"
+        },
+        "debtorAccountNumber": {
+            "description": "Transaction debtor account number",
+            "type": "string"
+        },
+        "creditorAccountNumber": {
+            "description": "Transaction creditor account number",
+            "type": "string"
+        },
+        "amount": {
+            "description": "Transaction monetary value",
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "multipleOf": 0.01
+        },
+        "time": {
+            "description": "Transaction execution data time in format: YYYY-MM-DDThh:mm:ss.sTZD",
+            "type": "string",
+            "format": "date-time"
+        },
+        "location": {
+            "description": "Transaction execution location coordinates",
+            "type": "object",
+            "properties": {
+                "longtitude": {
+                    "description": "Longtitude of transaction location in decimal degrees",
+                    "type": "string",
+                    "pattern" : "^\\d{2}\\.\\d{6}$"
+                },
+                "latitude": {
+                    "description": "Latitude of transaction location in decimal degrees",
+                    "type": "string",
+                    "pattern" : "^\\d{2}\\.\\d{6}$"
+                }
+            },
+            "required": ["longtitude","latitude"],
+            "additionalProperties" : false
+        }
+    },
+    "required": ["debtorCreditCardNumber","debtorAccountNumber","creditorAccountNumber","amount","time", "location"],
+    "additionalProperties" : false
+}
