@@ -24,7 +24,7 @@ dependencies {
     compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.4.0"
 }
 
-mainClassName = 'io.vertx.core.Launcher'
+mainClassName = 'org.ignas.frauddetection.DetectionLauncher'
 
 shadowJar {
     manifest {
@@ -44,8 +44,4 @@ idea {
     project {
         languageLevel = sourceCompatibility
     }
-}
-
-run {
-    args = ['run', 'org.ignas.frauddetection.MainVerticle']
 }

@@ -1,12 +1,11 @@
-package org.ignas.frauddetection.api.evaluation;
+package org.ignas.frauddetection.httpapi.request;
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.ignas.frauddetection.shared.Location;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 
-public class EvaluationRequestDTO {
+public class EvaluationRequest {
 
     private String debtorCreditCardId;
 
@@ -18,9 +17,9 @@ public class EvaluationRequestDTO {
 
     private OffsetDateTime time;
 
-    private TransactionLocationDTO location;
+    private Location location;
 
-    public EvaluationRequestDTO() {
+    public EvaluationRequest() {
     }
 
     public String getDebtorCreditCardId() {
@@ -63,11 +62,11 @@ public class EvaluationRequestDTO {
         this.time = time;
     }
 
-    public TransactionLocationDTO getLocation() {
+    public Location getLocation() {
         return location;
     }
 
-    public void setLocation(TransactionLocationDTO location) {
+    public void setLocation(Location location) {
         this.location = location;
     }
 }

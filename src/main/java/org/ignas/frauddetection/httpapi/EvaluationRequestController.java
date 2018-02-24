@@ -1,8 +1,10 @@
-package org.ignas.frauddetection;
+package org.ignas.frauddetection.httpapi;
 
 import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
@@ -13,14 +15,13 @@ import io.vertx.ext.web.api.validation.HTTPRequestValidationHandler;
 import io.vertx.ext.web.api.validation.ValidationException;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.http.HttpStatus;
-import org.ignas.frauddetection.api.Request;
-import org.ignas.frauddetection.api.evaluation.EvaluationRequestDTO;
+import org.ignas.frauddetection.httpapi.request.EvaluationRequest;
 
-public class MainVerticle extends AbstractVerticle {
+public class EvaluationRequestController extends AbstractVerticle {
 
 
     @Override
-    public void start() {
+    public void start(Future<Void> startFuture) {
         HttpServer server = vertx.createHttpServer();
 
         Router router = Router.router(vertx);
@@ -43,16 +44,20 @@ public class MainVerticle extends AbstractVerticle {
                     .handler(HTTPRequestValidationHandler.create()
                         .addJsonBodySchema(requestSchema))
                     .handler(req -> {
-                        EvaluationRequestDTO requestBody = req.getBodyAsJson()
-                            .mapTo(EvaluationRequestDTO.class);
+                        EvaluationRequest requestBody = req.getBodyAsJson()
+                            .mapTo(EvaluationRequest.class);
 
                         String transactionId = req.pathParam("transactionId");
+
+                        EventBus eb = vertx.eventBus();
+
+                        eb.publish("transaction-mapping.resolver", req.getBodyAsJson());
 
                         req.response()
                             .putHeader("content-type", "application/json")
                             .end("Hello from Ignas!" + req.getBodyAsJson().toString());
                     })
-                    .failureHandler(MainVerticle::handleFailure);
+                    .failureHandler(EvaluationRequestController::handleFailure);
 
                 server.requestHandler(router::accept).listen(8080);
             });
