@@ -6,7 +6,7 @@ Proof of concept fraud detection based on Bayesian inference
 
 ## Running the app
 
-Application is built using [Gradle](https://gradle.org/ ) build tool, therefore easyiest way to run the application is running gradle run task in root application folder:
+Application is built using [Gradle](https://gradle.org/ ) build tool, therefore easiest way to run the application is running gradle run task in root application folder:
 
 ```
 gradle run
