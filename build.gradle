@@ -21,6 +21,7 @@ dependencies {
     compile "io.vertx:vertx-core:${vertxVersion}"
     compile "io.vertx:vertx-web:${vertxVersion}"
     compile "io.vertx:vertx-web-api-contract:${vertxVersion}"
+    compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.4.0"
 }
 
 mainClassName = 'io.vertx.core.Launcher'

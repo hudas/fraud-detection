@@ -3,15 +3,15 @@
     "description": "Fraud evaluation request for transaction",
     "type": "object",
     "properties": {
-        "debtorCreditCardNumber": {
+        "debtorCreditCardId": {
             "description": "Credit card used to initiate a transaction",
             "type": "string"
         },
-        "debtorAccountNumber": {
+        "debtorAccountId": {
             "description": "Transaction debtor account number",
             "type": "string"
         },
-        "creditorAccountNumber": {
+        "creditorAccountId": {
             "description": "Transaction creditor account number",
             "type": "string"
         },
@@ -45,6 +45,6 @@
             "additionalProperties" : false
         }
     },
-    "required": ["debtorCreditCardNumber","debtorAccountNumber","creditorAccountNumber","amount","time", "location"],
+    "required": ["debtorCreditCardId","debtorAccountId","creditorAccountId","amount","time", "location"],
     "additionalProperties" : false
 }
