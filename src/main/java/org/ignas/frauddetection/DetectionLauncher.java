@@ -8,13 +8,13 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.impl.launcher.VertxLifecycleHooks;
 import io.vertx.core.json.JsonObject;
 import org.ignas.frauddetection.httpapi.EvaluationRequestController;
-import org.ignas.frauddetection.transactionmapping.FraudCriteriaResolver;
+import org.ignas.frauddetection.transactionevaluation.FraudCriteriaResolver;
 import org.ignas.frauddetection.transactionstatistic.TransactionStatisticArchive;
 
 /**
  * Custom fraud detection cluster launcher
  *
- * TODO: Should refactor vertice adrresses to some external routing mechanism this way decoupling services.
+ * TODO: Should refactor vertice addresses to some external routing mechanism this way decoupling services.
  *
  */
 public class DetectionLauncher implements VertxLifecycleHooks {
@@ -22,13 +22,21 @@ public class DetectionLauncher implements VertxLifecycleHooks {
     public static void main(String... args) {
         Vertx vertx = Vertx.vertx();
 
-        ImmutableList<Verticle> deploymentConfig = ImmutableList.<Verticle>builder()
+        ImmutableList<Verticle> standardVertices = ImmutableList.<Verticle>builder()
             .add(new EvaluationRequestController())
+            .build();
+
+        standardVertices.forEach(vertx::deployVerticle);
+
+        DeploymentOptions workerDeployment = new DeploymentOptions()
+            .setWorker(true);
+
+        ImmutableList<Verticle> workers = ImmutableList.<Verticle>builder()
             .add(new FraudCriteriaResolver())
             .add(new TransactionStatisticArchive())
             .build();
 
-        deploymentConfig.forEach(vertx::deployVerticle);
+        workers.forEach(it -> vertx.deployVerticle(it, workerDeployment));
     }
 
     @Override

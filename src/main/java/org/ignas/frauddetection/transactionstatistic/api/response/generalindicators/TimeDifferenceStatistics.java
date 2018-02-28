@@ -1,37 +1,45 @@
 package org.ignas.frauddetection.transactionstatistic.api.response.generalindicators;
 
+import org.joda.time.Days;
 import org.joda.time.Seconds;
 
 import java.math.BigDecimal;
 
 public class TimeDifferenceStatistics {
 
-    private Seconds average;
-    private Seconds deviationAverage;
+    private int periodLength;
 
-    private Seconds expected;
-    private Seconds deviationExpected;
+    private int average;
+    private int deviationAverage;
 
-    public TimeDifferenceStatistics(Seconds average, Seconds deviationAverage, Seconds expected, Seconds deviationExpected) {
+    private int expected;
+    private int deviationExpected;
+
+    public TimeDifferenceStatistics(int periodLength, int average, int deviationAverage, int expected, int deviationExpected) {
+        this.periodLength = periodLength;
         this.average = average;
         this.deviationAverage = deviationAverage;
         this.expected = expected;
         this.deviationExpected = deviationExpected;
     }
 
-    public Seconds getAverage() {
+    public int getPeriodLength() {
+        return periodLength;
+    }
+
+    public int getAverage() {
         return average;
     }
 
-    public Seconds getDeviationAverage() {
+    public int getDeviationAverage() {
         return deviationAverage;
     }
 
-    public Seconds getExpected() {
+    public int getExpected() {
         return expected;
     }
 
-    public Seconds getDeviationExpected() {
+    public int getDeviationExpected() {
         return deviationExpected;
     }
 }

@@ -1,12 +1,13 @@
-package org.ignas.frauddetection.transactionstatistic.api.response;
+package org.ignas.frauddetection.transactionevaluation.domain.stats;
 
 import org.ignas.frauddetection.shared.Location;
+import org.ignas.frauddetection.transactionevaluation.domain.stats.details.PersonalPeriodStatistics;
 import org.joda.time.LocalDateTime;
 
 import java.math.BigDecimal;
 import java.util.List;
 
-public class DebtorTransactionStatistics {
+public class DebtorStatistics {
 
     private Location mostUsedLocation;
 
@@ -14,13 +15,13 @@ public class DebtorTransactionStatistics {
 
     private LocalDateTime lastTransactionExecutionTime;
 
-    private List<PersonalPeriod> periodicStatistics;
+    private List<PersonalPeriodStatistics> periodicStatistics;
 
-    public DebtorTransactionStatistics(
+    public DebtorStatistics(
         Location mostUsedLocation,
         BigDecimal mostValuableTransaction,
         LocalDateTime lastTransactionExecutionTime,
-        List<PersonalPeriod> periodicStatistics) {
+        List<PersonalPeriodStatistics> periodicStatistics) {
 
         this.mostUsedLocation = mostUsedLocation;
         this.mostValuableTransaction = mostValuableTransaction;
@@ -40,7 +41,7 @@ public class DebtorTransactionStatistics {
         return lastTransactionExecutionTime;
     }
 
-    public List<PersonalPeriod> getPeriodicStatistics() {
+    public List<PersonalPeriodStatistics> getPeriodicStatistics() {
         return periodicStatistics;
     }
 }

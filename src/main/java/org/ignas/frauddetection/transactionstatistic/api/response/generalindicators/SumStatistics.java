@@ -1,35 +1,47 @@
 package org.ignas.frauddetection.transactionstatistic.api.response.generalindicators;
 
+import org.joda.time.Days;
+
 import java.math.BigDecimal;
 
 public class SumStatistics {
 
-    private BigDecimal average;
-    private BigDecimal deviationAverage;
+    /**
+     * Length in Days
+     */
+    private int periodLength;
 
-    private BigDecimal expected;
-    private BigDecimal deviationExpected;
+    private float average;
+    private float deviationAverage;
 
-    public SumStatistics(BigDecimal average, BigDecimal deviationAverage, BigDecimal expected, BigDecimal deviationExpected) {
+    private float expected;
+    private float deviationExpected;
+
+    public SumStatistics(int periodLength, float average, float deviationAverage, float expected, float deviationExpected) {
+        this.periodLength = periodLength;
         this.average = average;
         this.deviationAverage = deviationAverage;
         this.expected = expected;
         this.deviationExpected = deviationExpected;
     }
 
-    public BigDecimal getAverage() {
+    public int getPeriodLength() {
+        return periodLength;
+    }
+
+    public float getAverage() {
         return average;
     }
 
-    public BigDecimal getDeviationAverage() {
+    public float getDeviationAverage() {
         return deviationAverage;
     }
 
-    public BigDecimal getExpected() {
+    public float getExpected() {
         return expected;
     }
 
-    public BigDecimal getDeviationExpected() {
+    public float getDeviationExpected() {
         return deviationExpected;
     }
 }

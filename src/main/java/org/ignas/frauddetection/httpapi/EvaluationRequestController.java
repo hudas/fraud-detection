@@ -16,6 +16,7 @@ import io.vertx.ext.web.api.validation.ValidationException;
 import io.vertx.ext.web.handler.BodyHandler;
 import org.apache.http.HttpStatus;
 import org.ignas.frauddetection.httpapi.request.EvaluationRequest;
+import org.ignas.frauddetection.transactionevaluation.api.request.FraudEvaluationRequest;
 
 public class EvaluationRequestController extends AbstractVerticle {
 
@@ -28,6 +29,7 @@ public class EvaluationRequestController extends AbstractVerticle {
 
         // Globally Register Jackson mapper module for Java 8 time mapping support
         Json.mapper.registerModule(new JSR310Module());
+        EventBus eb = vertx.eventBus();
 
         vertx.fileSystem()
             .readFile("api-schemas/request-schema.json", event -> {
@@ -44,14 +46,18 @@ public class EvaluationRequestController extends AbstractVerticle {
                     .handler(HTTPRequestValidationHandler.create()
                         .addJsonBodySchema(requestSchema))
                     .handler(req -> {
+                        System.out.println("START:" + System.currentTimeMillis());
                         EvaluationRequest requestBody = req.getBodyAsJson()
                             .mapTo(EvaluationRequest.class);
 
-                        String transactionId = req.pathParam("transactionId");
+                        FraudEvaluationRequest evaluate = new FraudEvaluationRequest(
+                          requestBody.getTransactionId(),
+                          requestBody.getCreditorAccountId(),
+                          requestBody.getLocation(),
+                          requestBody.getTime().toLocalDateTime()
+                        );
 
-                        EventBus eb = vertx.eventBus();
-
-                        eb.publish("transaction-mapping.resolver", req.getBodyAsJson());
+                        eb.publish("transaction-mapping.resolver", evaluate);
 
                         req.response()
                             .putHeader("content-type", "application/json")

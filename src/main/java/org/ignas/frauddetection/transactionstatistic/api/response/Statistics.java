@@ -2,6 +2,8 @@ package org.ignas.frauddetection.transactionstatistic.api.response;
 
 public class Statistics {
 
+    private PublicStatistics publicStatistics;
+
     private DebtorTransactionStatistics debtorStatistics;
 
     private CredibilityScore creditorScore;
@@ -17,12 +19,14 @@ public class Statistics {
         DebtorTransactionStatistics debtorStatistics,
         CredibilityScore creditorScore,
         CredibilityScore timeScore,
-        CredibilityScore locationScore) {
+        CredibilityScore locationScore,
+        PublicStatistics publicStatistics) {
 
         this.debtorStatistics = debtorStatistics;
         this.creditorScore = creditorScore;
         this.timeScore = timeScore;
         this.locationScore = locationScore;
+        this.publicStatistics = publicStatistics;
     }
 
 
@@ -42,4 +46,7 @@ public class Statistics {
         return locationScore;
     }
 
+    public PublicStatistics getPublicStatistics() {
+        return publicStatistics;
+    }
 }

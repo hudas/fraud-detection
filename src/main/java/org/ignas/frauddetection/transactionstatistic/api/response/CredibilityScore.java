@@ -2,23 +2,31 @@ package org.ignas.frauddetection.transactionstatistic.api.response;
 
 public class CredibilityScore {
 
-    private Long numberOfFraudulentActivites;
+    private float fraudRate;
 
-    private Long numberOfTotalActivites;
+    private float fraudRateAverage;
 
-    public CredibilityScore() {
+    private float fraudRateDeviation;
+
+    public CredibilityScore(
+        float fraudRate,
+        float fraudRateAverage,
+        float fraudRateDeviation) {
+
+        this.fraudRate = fraudRate;
+        this.fraudRateAverage = fraudRateAverage;
+        this.fraudRateDeviation = fraudRateDeviation;
     }
 
-    public CredibilityScore(Long numberOfFraudulentActivites, Long numberOfTotalActivites) {
-        this.numberOfFraudulentActivites = numberOfFraudulentActivites;
-        this.numberOfTotalActivites = numberOfTotalActivites;
+    public float getFraudRate() {
+        return fraudRate;
     }
 
-    public Long getNumberOfFraudulentActivites() {
-        return numberOfFraudulentActivites;
+    public float getFraudRateAverage() {
+        return fraudRateAverage;
     }
 
-    public Long getNumberOfTotalActivites() {
-        return numberOfTotalActivites;
+    public float getFraudRateDeviation() {
+        return fraudRateDeviation;
     }
 }

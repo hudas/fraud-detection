@@ -1,6 +1,7 @@
 package org.ignas.frauddetection.transactionstatistic;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import io.vertx.core.AbstractVerticle;
 import org.ignas.frauddetection.shared.ImmutableObjectCodec;
 import org.ignas.frauddetection.shared.Location;
@@ -21,34 +22,26 @@ public class TransactionStatisticArchive extends AbstractVerticle {
     // TODO: delete after calculations implemented
     private static final Statistics TEMPORARY_HARDCODED_RESULT = new Statistics(
         new DebtorTransactionStatistics(
+            new Location("54.25123", "25.45211"),
             BigDecimal.TEN,
+            LocalDateTime.now().minusHours(1),
             ImmutableList.of(
-                new PersonalPeriodStatistics(
-                    Days.SEVEN,
+                new PersonalPeriod(
+                    7,
                     BigDecimal.valueOf(1),
-                    BigDecimal.valueOf(2),
-                    BigDecimal.valueOf(3),
-                    LocalDateTime.now().minusHours(1),
-                    new Location("54.25123", "25.45211"))
-            ),
-            ImmutableList.of(
-                new GeneralPeriodStatistics(
-                    Days.SEVEN,
-                    new SumStatistics(
-                        BigDecimal.valueOf(10),
-                        BigDecimal.valueOf(5),
-                        BigDecimal.valueOf(11),
-                        BigDecimal.valueOf(6)
-                    ),
-                    new CountStatistics(1, 2, 3, 4),
-                    new TimeDifferenceStatistics(Seconds.ONE, Seconds.TWO, Seconds.TWO, Seconds.ONE),
-                    new DistanceDifferenceStatistics(BigDecimal.TEN, BigDecimal.ONE)
+                    2
                 )
             )
         ),
-        new CredibilityScore(123L, 125L),
-        new CredibilityScore(123L, 125L),
-        new CredibilityScore(123L, 125L)
+        new CredibilityScore(123f, 125f, 12f),
+        new CredibilityScore(123f, 125f, 12f),
+        new CredibilityScore(123f, 125f, 12f),
+        new PublicStatistics(
+            Lists.newArrayList(new SumStatistics(7, 10f,5f, 11f, 6f)),
+            Lists.newArrayList(new CountStatistics(7, 1, 2, 3, 4)),
+            Lists.newArrayList(new TimeDifferenceStatistics(7, 1, 2, 3, 4)),
+            Lists.newArrayList(new DistanceDifferenceStatistics(7, 10f, 15f))
+        )
     );
 
     @Override
@@ -58,8 +51,6 @@ public class TransactionStatisticArchive extends AbstractVerticle {
 
         vertx.eventBus().consumer("transaction-statistic.archive")
             .handler(message -> {
-                System.out.println("Archive: " + message);
-                System.out.println("Returning fake response!");
                 message.reply(TEMPORARY_HARDCODED_RESULT);
             });
     }

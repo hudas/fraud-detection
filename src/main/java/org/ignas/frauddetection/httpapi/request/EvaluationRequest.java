@@ -7,6 +7,12 @@ import java.time.OffsetDateTime;
 
 public class EvaluationRequest {
 
+    /**
+     * Any unique ID for transaction. Uniqueness must be ensured outside system scope.
+     * Id is required only to ensure that transaction is not used twice by learning process
+     */
+    private String transactionId;
+
     private String debtorCreditCardId;
 
     private String debtorAccountId;
@@ -20,6 +26,14 @@ public class EvaluationRequest {
     private Location location;
 
     public EvaluationRequest() {
+    }
+
+    public String getTransactionId() {
+        return transactionId;
+    }
+
+    public void setTransactionId(String transactionId) {
+        this.transactionId = transactionId;
     }
 
     public String getDebtorCreditCardId() {
