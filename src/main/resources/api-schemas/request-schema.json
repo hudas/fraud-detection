@@ -3,17 +3,25 @@
     "description": "Fraud evaluation request for transaction",
     "type": "object",
     "properties": {
+        "transactionId" : {
+            "description": "Unique transaction id to prevent duplicated processing",
+            "type": "string",
+            "minLength": 1
+        },
         "debtorCreditCardId": {
             "description": "Credit card used to initiate a transaction",
-            "type": "string"
+            "type": "string",
+            "minLength": 1
         },
         "debtorAccountId": {
             "description": "Transaction debtor account number",
-            "type": "string"
+            "type": "string",
+            "minLength": 1
         },
         "creditorAccountId": {
             "description": "Transaction creditor account number",
-            "type": "string"
+            "type": "string",
+            "minLength": 1
         },
         "amount": {
             "description": "Transaction monetary value",
@@ -22,7 +30,7 @@
             "multipleOf": 0.01
         },
         "time": {
-            "description": "Transaction execution data time in format: YYYY-MM-DDThh:mm:ss.sTZD",
+            "description": "Transaction execution data time in format: YYYY-MM-DDThh:mm:ss.s",
             "type": "string",
             "format": "date-time"
         },
@@ -45,6 +53,6 @@
             "additionalProperties" : false
         }
     },
-    "required": ["debtorCreditCardId","debtorAccountId","creditorAccountId","amount","time", "location"],
+    "required": ["transactionId", "debtorCreditCardId","debtorAccountId","creditorAccountId","amount","time", "location"],
     "additionalProperties" : false
 }

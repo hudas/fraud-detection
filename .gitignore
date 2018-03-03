@@ -52,3 +52,5 @@ hs_err_pid*
 
 #Vertx
 .vertx/
+
+fraud-detection.iml

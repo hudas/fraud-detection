@@ -1,9 +1,9 @@
 package org.ignas.frauddetection.transactionevaluation.api.request;
 
 import org.ignas.frauddetection.shared.Location;
+import org.joda.time.LocalDateTime;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 public class FraudEvaluationRequest {
 
@@ -22,7 +22,16 @@ public class FraudEvaluationRequest {
     public FraudEvaluationRequest() {
     }
 
-    public FraudEvaluationRequest(String debtorId, String creditorId, Location location, LocalDateTime time) {
+    public FraudEvaluationRequest(
+            String transactionId,
+            BigDecimal amount,
+            String debtorId,
+            String creditorId,
+            Location location,
+            LocalDateTime time) {
+
+        this.amount = amount;
+        this.transactionId = transactionId;
         this.debtorId = debtorId;
         this.creditorId = creditorId;
         this.location = location;

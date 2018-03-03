@@ -14,5 +14,15 @@ public class FraudRate {
         this.fraudRateDeviation = fraudRateDeviation;
     }
 
+    public float getFraudRate() {
+        return fraudRate;
+    }
 
+    public float getFraudRateAverage() {
+        return fraudRateAverage;
+    }
+
+    public float getFraudRateDeviation() {
+        return fraudRateDeviation;
+    }
 }

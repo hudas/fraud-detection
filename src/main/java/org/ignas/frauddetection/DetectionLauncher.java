@@ -8,8 +8,9 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.impl.launcher.VertxLifecycleHooks;
 import io.vertx.core.json.JsonObject;
 import org.ignas.frauddetection.httpapi.EvaluationRequestController;
+import org.ignas.frauddetection.probabilitystatistics.ProbabilityStatisticArchive;
 import org.ignas.frauddetection.transactionevaluation.FraudCriteriaResolver;
-import org.ignas.frauddetection.transactionstatistic.TransactionStatisticArchive;
+import org.ignas.frauddetection.transactionstatistics.TransactionStatisticArchive;
 
 /**
  * Custom fraud detection cluster launcher
@@ -34,6 +35,7 @@ public class DetectionLauncher implements VertxLifecycleHooks {
         ImmutableList<Verticle> workers = ImmutableList.<Verticle>builder()
             .add(new FraudCriteriaResolver())
             .add(new TransactionStatisticArchive())
+            .add(new ProbabilityStatisticArchive())
             .build();
 
         workers.forEach(it -> vertx.deployVerticle(it, workerDeployment));

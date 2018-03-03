@@ -1,9 +1,12 @@
 package org.ignas.frauddetection.httpapi.request;
 
 import org.ignas.frauddetection.shared.Location;
+import org.joda.time.DateTime;
+import org.joda.time.LocalDateTime;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 
 public class EvaluationRequest {
 
@@ -21,7 +24,7 @@ public class EvaluationRequest {
 
     private BigDecimal amount;
 
-    private OffsetDateTime time;
+    private DateTime time;
 
     private Location location;
 
@@ -68,11 +71,11 @@ public class EvaluationRequest {
         this.amount = amount;
     }
 
-    public OffsetDateTime getTime() {
+    public DateTime getTime() {
         return time;
     }
 
-    public void setTime(OffsetDateTime time) {
+    public void setTime(DateTime time) {
         this.time = time;
     }
 

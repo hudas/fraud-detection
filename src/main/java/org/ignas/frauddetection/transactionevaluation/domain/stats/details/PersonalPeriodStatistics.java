@@ -8,22 +8,22 @@ public class PersonalPeriodStatistics {
 
     private Days periodLength;
 
-    private BigDecimal expensesSum;
+    private Float expensesSum;
 
     private Integer transactionCount;
 
 
-    public PersonalPeriodStatistics(Days periodLength, BigDecimal expensesSum, Integer transactionCount) {
+    public PersonalPeriodStatistics(Days periodLength, Float expensesSum, Integer transactionCount) {
         this.periodLength = periodLength;
         this.expensesSum = expensesSum;
         this.transactionCount = transactionCount;
     }
 
-    public Days getPeriodLength() {
-        return periodLength;
+    public boolean isForPeriod(Days period) {
+        return periodLength.compareTo(period) == 0;
     }
 
-    public BigDecimal getExpensesSum() {
+    public Float getExpensesSum() {
         return expensesSum;
     }
 

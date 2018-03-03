@@ -1,15 +1,15 @@
 package org.ignas.frauddetection.transactionevaluation.domain;
 
 import org.ignas.frauddetection.shared.Location;
+import org.joda.time.LocalDateTime;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 public class Transaction {
 
     private String id;
 
-    private BigDecimal amount;
+    private float amount;
 
     private String debtor;
 
@@ -19,7 +19,7 @@ public class Transaction {
 
     private LocalDateTime time;
 
-    public Transaction(String id, BigDecimal amount, String debtor, String creditor, Location location, LocalDateTime time) {
+    public Transaction(String id, float amount, String debtor, String creditor, Location location, LocalDateTime time) {
         this.id = id;
         this.amount = amount;
         this.debtor = debtor;
@@ -42,5 +42,9 @@ public class Transaction {
 
     public LocalDateTime getTime() {
         return time;
+    }
+
+    public float getAmount() {
+        return amount;
     }
 }
