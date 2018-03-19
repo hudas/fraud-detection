@@ -31,14 +31,14 @@ public class ProbabilityCalculatorIntegration implements ServiceIntegration<Eval
         return loader;
     }
 
-    private static FraudEvaluationRequest toResolverAPI(EvaluationRequest requestBody) {
+    private static FraudEvaluationRequest toResolverAPI(EvaluationRequest domain) {
         return new FraudEvaluationRequest(
-            requestBody.getTransactionId(),
-            requestBody.getAmount(),
-            requestBody.getDebtorAccountId(),
-            requestBody.getCreditorAccountId(),
-            requestBody.getLocation(),
-            requestBody.getTime().toLocalDateTime()
+            domain.getTransactionId(),
+            domain.getAmount(),
+            domain.getDebtorAccountId(),
+            domain.getCreditorAccountId(),
+            domain.getLocation(),
+            domain.getTime().toLocalDateTime()
         );
     }
 }
