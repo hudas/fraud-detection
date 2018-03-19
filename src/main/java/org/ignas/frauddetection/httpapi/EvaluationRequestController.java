@@ -3,7 +3,6 @@ package org.ignas.frauddetection.httpapi;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
@@ -16,25 +15,25 @@ public class EvaluationRequestController extends AbstractVerticle {
 
 
     public static final int DEFAULT_TIMEOUT = 1000;
+    public static final int SERVER_PORT = 8080;
 
     @Override
-    public void start(Future<Void> startFuture) {
+    public void start(Future<Void> verticeStartup) {
         registerDateMapper();
 
-        vertx.fileSystem()
-            .readFile("api-schemas/request-schema.json", configLoading -> {
-                if (configLoading.failed()) {
-                    System.out.println(configLoading.cause().getMessage());
-                    return;
-                }
+        String validationSchema = new ConfigurationProvider(vertx)
+            .loadApiSchema()
+            .result();
 
-                String validationSchema = configLoading.map(Buffer::toString).result();
+        Router router = buildRouter(validationSchema);
 
-                Router router = buildRouter(validationSchema);
+        vertx.createHttpServer()
+            .requestHandler(router::accept)
+            .listen(SERVER_PORT);
 
-                vertx.createHttpServer().requestHandler(router::accept).listen(8080);
-                System.out.println("HTTP server started on port 8080");
-            });
+        System.out.println("HTTP server started on port " + SERVER_PORT);
+
+        verticeStartup.complete();
     }
 
     private Router buildRouter(String requestSchema) {
