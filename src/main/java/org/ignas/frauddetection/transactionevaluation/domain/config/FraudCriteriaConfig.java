@@ -150,7 +150,7 @@ public class FraudCriteriaConfig {
                         Seconds timeBetween =
                             Seconds.secondsBetween(executionTime, previousTransactionTime);
 
-                        MeanStatistics<Seconds> time = statistics.getGlobal().getTime();
+                        MeanStatistics<Seconds> time = statistics.getGlobal().getTimeDifference();
 
                         return new DeviationStatistics(
                             timeBetween.getSeconds(),
@@ -172,7 +172,7 @@ public class FraudCriteriaConfig {
                         Seconds timeBetween =
                             Seconds.secondsBetween(executionTime, previousTransactionTime);
 
-                        MeanStatistics<Seconds> time = statistics.getGlobal().getTime();
+                        MeanStatistics<Seconds> time = statistics.getGlobal().getTimeDifference();
 
                         return new DeviationStatistics(
                             timeBetween.getSeconds(),
@@ -214,12 +214,12 @@ public class FraudCriteriaConfig {
                     .calculator(new DeviationEvaluator())
                     .mapper((Days period, Transaction transaction, HistoricalData statistics) -> {
                         int alreadyInitiatedTransactions = statistics.getDebtor()
-                            .numberOfTransactionsForPeriod(period);
+                            .getNumberOfTransactionsForPeriod(period);
 
                         // This single transaction we are evaluating is equal to 1
                         int totalTransactions = 1 + alreadyInitiatedTransactions;
 
-                        MeanPeriodStatistics<Integer> globalCountDetails = statistics.getGlobal()
+                        MeanPeriodStatistics<Float> globalCountDetails = statistics.getGlobal()
                             .countStatisticsForPeriod(period);
 
                         return new DeviationStatistics(
@@ -236,12 +236,12 @@ public class FraudCriteriaConfig {
                     .calculator(new DeviationEvaluator())
                     .mapper((Days period, Transaction transaction, HistoricalData statistics) -> {
                         int alreadyInitiatedTransactions = statistics.getDebtor()
-                            .numberOfTransactionsForPeriod(period);
+                            .getNumberOfTransactionsForPeriod(period);
 
                         // This single transaction we are evaluating is equal to 1
                         int totalTransactions = 1 + alreadyInitiatedTransactions;
 
-                        MeanPeriodStatistics<Integer> globalCountDetails = statistics.getGlobal()
+                        MeanPeriodStatistics<Float> globalCountDetails = statistics.getGlobal()
                             .countStatisticsForPeriod(period);
 
                         return new DeviationStatistics(
@@ -262,7 +262,7 @@ public class FraudCriteriaConfig {
                     .period(Days.ONE, Days.SEVEN, Days.days(30))
                     .calculator(new DeviationEvaluator())
                     .mapper((Days period, Transaction transaction, HistoricalData statistics) -> {
-                        float alreadySpent = statistics.getDebtor().expensesForPeriod(period);
+                        float alreadySpent = statistics.getDebtor().getExpensesForPeriod(period);
                         float totalPersonalExpenses = alreadySpent + transaction.getAmount();
 
                         MeanPeriodStatistics<Float> globalSumDetails = statistics.getGlobal()
@@ -281,7 +281,7 @@ public class FraudCriteriaConfig {
                     .period(Days.ONE, Days.SEVEN, Days.days(30))
                     .calculator(new DeviationEvaluator())
                     .mapper((Days period, Transaction transaction, HistoricalData statistics) -> {
-                        float alreadySpent = statistics.getDebtor().expensesForPeriod(period);
+                        float alreadySpent = statistics.getDebtor().getExpensesForPeriod(period);
                         float totalPersonalExpenses = alreadySpent + transaction.getAmount();
 
                         MeanPeriodStatistics<Float> globalSumDetails = statistics.getGlobal()
@@ -301,7 +301,7 @@ public class FraudCriteriaConfig {
                     .calculator(new DeviationEvaluator())
                     .mapper((Days period, Transaction transaction, HistoricalData statistics) -> {
                         float alreadyInitiatedTransactions = statistics.getDebtor()
-                            .expensesForPeriod(period);
+                            .getExpensesForPeriod(period);
 
                         float amountRatio = transaction.getAmount() / alreadyInitiatedTransactions;
 

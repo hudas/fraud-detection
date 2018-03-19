@@ -8,7 +8,11 @@ public class HistoricalData {
 
     private EnvironmentStatistics environment;
 
-    public HistoricalData(DebtorStatistics debtor, GlobalStatistics global, EnvironmentStatistics environment) {
+    public HistoricalData(
+        DebtorStatistics debtor,
+        GlobalStatistics global,
+        EnvironmentStatistics environment) {
+
         this.debtor = debtor;
         this.global = global;
         this.environment = environment;

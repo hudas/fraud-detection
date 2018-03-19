@@ -1,7 +1,8 @@
 package org.ignas.frauddetection.transactionevaluation.integration.converters;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.ignas.frauddetection.probabilitystatistics.api.request.CriteriaGroupProbabilityRequest;
-import org.ignas.frauddetection.probabilitystatistics.api.request.CriteriaProbabilityRequest;
 import org.ignas.frauddetection.probabilitystatistics.api.response.BayesTable;
 import org.ignas.frauddetection.transactionevaluation.domain.CriteriaGroup;
 
@@ -20,10 +21,18 @@ public class GroupProbabilityAPIMapper {
      * @return
      */
     public static CriteriaGroupProbabilityRequest mapRequest(List<String> groups) {
+        if (groups == null) {
+            return new CriteriaGroupProbabilityRequest(ImmutableList.of());
+        }
+
         return new CriteriaGroupProbabilityRequest(groups);
     }
 
     public static Map<String, CriteriaGroup> mapResponse(BayesTable result) {
+        if (result == null || result.getTable() == null) {
+            return ImmutableMap.of();
+        }
+
         return result.getTable()
             .entrySet()
             .stream()

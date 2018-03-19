@@ -14,20 +14,24 @@ public class PublicStatistics {
 
     private List<TimeDifferenceStatistics> time;
 
-    private List<DistanceDifferenceStatistics> distance;
+    private List<DistanceDifferenceStatistics> distanceToCommon;
+
+    private List<DistanceDifferenceStatistics> distanceToLast;
 
     public PublicStatistics(
         List<SumStatistics> sum,
         List<RatioStatistics> sumRatio,
         List<CountStatistics> count,
         List<TimeDifferenceStatistics> time,
-        List<DistanceDifferenceStatistics> distance) {
+        List<DistanceDifferenceStatistics> distanceToCommon,
+        List<DistanceDifferenceStatistics> distanceToLast) {
 
         this.sum = sum;
         this.sumRatio = sumRatio;
         this.count = count;
         this.time = time;
-        this.distance = distance;
+        this.distanceToCommon = distanceToCommon;
+        this.distanceToLast = distanceToLast;
     }
 
     public List<SumStatistics> getSum() {
@@ -46,7 +50,11 @@ public class PublicStatistics {
         return time;
     }
 
-    public List<DistanceDifferenceStatistics> getDistance() {
-        return distance;
+    public List<DistanceDifferenceStatistics> getDistanceToCommon() {
+        return distanceToCommon;
+    }
+
+    public List<DistanceDifferenceStatistics> getDistanceToLast() {
+        return distanceToLast;
     }
 }

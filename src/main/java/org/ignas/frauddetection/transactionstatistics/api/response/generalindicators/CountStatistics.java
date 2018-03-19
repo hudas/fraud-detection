@@ -4,13 +4,13 @@ public class CountStatistics {
 
     private int periodLength;
 
-    private int average;
-    private int deviationAverage;
+    private float average;
+    private float deviationAverage;
 
-    private int expected;
-    private int deviationExpected;
+    private float expected;
+    private float deviationExpected;
 
-    public CountStatistics(int periodLength, int average, int deviationAverage, int expected, int deviationExpected) {
+    public CountStatistics(int periodLength, float average, float deviationAverage, float expected, float deviationExpected) {
         this.periodLength = periodLength;
         this.average = average;
         this.deviationAverage = deviationAverage;
@@ -22,19 +22,19 @@ public class CountStatistics {
         return periodLength;
     }
 
-    public int getAverage() {
+    public float getAverage() {
         return average;
     }
 
-    public int getDeviationAverage() {
+    public float getDeviationAverage() {
         return deviationAverage;
     }
 
-    public int getExpected() {
+    public float getExpected() {
         return expected;
     }
 
-    public int getDeviationExpected() {
+    public float getDeviationExpected() {
         return deviationExpected;
     }
 }

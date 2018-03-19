@@ -25,13 +25,17 @@ import static java.util.stream.Collectors.toList;
 public class StatisticsAPIConverter {
 
     public static HistoricalData mapResponse(Statistics historicalData) {
+        if (historicalData == null) {
+            return null;
+        }
+
         GlobalStatistics globalStats = new GlobalStatistics(
             sumStatsFromDTO(historicalData),
             ratioStatsFromDTO(historicalData),
             countStatsFromDTO(historicalData),
             timeStatsFromDTO(historicalData),
-            distanceStatsFromDTO(historicalData),
-            distanceStatsFromDTO(historicalData)
+            commonDistanceStatsFromDTO(historicalData),
+            lastDistanceStatsFromDTO(historicalData)
         );
 
         EnvironmentStatistics environmentStats = new EnvironmentStatistics(
@@ -46,6 +50,10 @@ public class StatisticsAPIConverter {
     }
 
     public static StatisticsRequest mapRequest(Transaction transactionData) {
+        if (transactionData == null) {
+            return null;
+        }
+
         return new StatisticsRequest(
             transactionData.getDebtor(),
             transactionData.getCreditor(),
@@ -94,8 +102,19 @@ public class StatisticsAPIConverter {
      * @param statistics
      * @return
      */
-    private static MeanStatistics<Float> distanceStatsFromDTO(Statistics statistics) {
-        DistanceDifferenceStatistics stats = statistics.getPublicStatistics().getDistance()
+    private static MeanStatistics<Float> commonDistanceStatsFromDTO(Statistics statistics) {
+        DistanceDifferenceStatistics stats = statistics.getPublicStatistics().getDistanceToCommon()
+            .stream()
+            .findFirst()
+            .orElseThrow(IllegalStateException::new);
+
+        return MeanStatistics.<Float>builder()
+            .pastValues(stats.getAverage(), stats.getDeviationAverage())
+            .build();
+    }
+
+    private static MeanStatistics<Float> lastDistanceStatsFromDTO(Statistics statistics) {
+        DistanceDifferenceStatistics stats = statistics.getPublicStatistics().getDistanceToLast()
             .stream()
             .findFirst()
             .orElseThrow(IllegalStateException::new);
@@ -128,11 +147,11 @@ public class StatisticsAPIConverter {
             .collect(toList());
     }
 
-    private static List<MeanPeriodStatistics<Integer>> countStatsFromDTO(Statistics statistics) {
+    private static List<MeanPeriodStatistics<Float>> countStatsFromDTO(Statistics statistics) {
         return statistics.getPublicStatistics()
             .getCount()
             .stream()
-            .map(sumStatistics -> MeanPeriodStatistics.<Integer>builder(Days.days(sumStatistics.getPeriodLength()))
+            .map(sumStatistics -> MeanPeriodStatistics.<Float>builder(Days.days(sumStatistics.getPeriodLength()))
                 .expectedValues(sumStatistics.getExpected(), sumStatistics.getDeviationExpected())
                 .pastValues(sumStatistics.getAverage(), sumStatistics.getDeviationAverage())
                 .build()

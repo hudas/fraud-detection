@@ -8,10 +8,10 @@ public class EnvironmentStatistics {
     private FraudRate location;
     private FraudRate creditor;
 
-    public EnvironmentStatistics(FraudRate time, FraudRate location, FraudRate creditor) {
-        this.time = time;
-        this.location = location;
+    public EnvironmentStatistics(FraudRate creditor, FraudRate location, FraudRate time) {
         this.creditor = creditor;
+        this.location = location;
+        this.time = time;
     }
 
     public FraudRate getTime() {

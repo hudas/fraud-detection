@@ -13,7 +13,7 @@ public class GlobalStatistics {
 
     private List<MeanPeriodStatistics<Float>> singleAmountRatio;
 
-    private List<MeanPeriodStatistics<Integer>> count;
+    private List<MeanPeriodStatistics<Float>> count;
 
     private MeanStatistics<Seconds> time;
 
@@ -24,7 +24,7 @@ public class GlobalStatistics {
     public GlobalStatistics(
         List<MeanPeriodStatistics<Float>> sum,
         List<MeanPeriodStatistics<Float>> singleAmountRatio,
-        List<MeanPeriodStatistics<Integer>> count,
+        List<MeanPeriodStatistics<Float>> count,
         MeanStatistics<Seconds> time,
         MeanStatistics<Float> distanceToCommonLocation,
         MeanStatistics<Float> distanceToLastLocation) {
@@ -37,7 +37,7 @@ public class GlobalStatistics {
         this.distanceToLastLocation = distanceToLastLocation;
     }
 
-    public MeanStatistics<Seconds> getTime() {
+    public MeanStatistics<Seconds> getTimeDifference() {
         return time;
     }
 
@@ -53,7 +53,7 @@ public class GlobalStatistics {
         return getPeriodStatistics(sum, period);
     }
 
-    public MeanPeriodStatistics<Integer> countStatisticsForPeriod(Days period) {
+    public MeanPeriodStatistics<Float> countStatisticsForPeriod(Days period) {
         return getPeriodStatistics(count, period);
     }
 

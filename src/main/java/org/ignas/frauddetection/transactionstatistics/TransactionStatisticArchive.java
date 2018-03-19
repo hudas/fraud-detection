@@ -30,27 +30,30 @@ public class TransactionStatisticArchive extends AbstractVerticle {
         new CredibilityScore(123f, 125f, 12f),
         new CredibilityScore(123f, 125f, 12f),
         new PublicStatistics(
-                Lists.newArrayList(
-                    new SumStatistics(1, 10f,10f, 11f, 6f),
-                    new SumStatistics(7, 50f,20f, 55f, 11f),
-                    new SumStatistics(30, 500f,100f, 505f, 120f)
-                ),
-                Lists.newArrayList(
-                    new RatioStatistics(1, 10f,1f),
-                    new RatioStatistics(7, 20f,5f),
-                    new RatioStatistics(30, 50f,10f)
-                ),
-                Lists.newArrayList(
-                    new CountStatistics(1, 1, 0, 2, 1),
-                    new CountStatistics(7, 3, 0, 5, 1),
-                    new CountStatistics(30, 20, 3, 22, 3)
-                ),
-                Lists.newArrayList(
-                    new TimeDifferenceStatistics(7, 1, 2, 3, 4)
-                ),
-                Lists.newArrayList(
-                    new DistanceDifferenceStatistics(7, 10f, 15f)
-                )
+            Lists.newArrayList(
+                new SumStatistics(1, 10f,10f, 11f, 6f),
+                new SumStatistics(7, 50f,20f, 55f, 11f),
+                new SumStatistics(30, 500f,100f, 505f, 120f)
+            ),
+            Lists.newArrayList(
+                new RatioStatistics(1, 10f,1f),
+                new RatioStatistics(7, 20f,5f),
+                new RatioStatistics(30, 50f,10f)
+            ),
+            Lists.newArrayList(
+                new CountStatistics(1, 1, 0, 2, 1),
+                new CountStatistics(7, 3, 0, 5, 1),
+                new CountStatistics(30, 20, 3, 22, 3)
+            ),
+            Lists.newArrayList(
+                new TimeDifferenceStatistics(7, 1, 2, 3, 4)
+            ),
+            Lists.newArrayList(
+                new DistanceDifferenceStatistics(7, 10f, 15f)
+            ),
+            Lists.newArrayList(
+                new DistanceDifferenceStatistics(7, 10f, 15f)
+            )
         )
     );
 

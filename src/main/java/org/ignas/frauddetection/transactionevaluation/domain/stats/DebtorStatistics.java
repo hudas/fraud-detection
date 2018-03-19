@@ -59,7 +59,7 @@ public class DebtorStatistics {
         return shortestTimeBetweenTransactions;
     }
 
-    public float expensesForPeriod(Days period) {
+    public float getExpensesForPeriod(Days period) {
         return periodicStatistics.stream()
                 .filter(stats -> stats.isForPeriod(period))
                 .map(PersonalPeriodStatistics::getExpensesSum)
@@ -67,7 +67,7 @@ public class DebtorStatistics {
                 .orElseThrow(IllegalStateException::new);
     }
 
-    public int numberOfTransactionsForPeriod(Days period) {
+    public int getNumberOfTransactionsForPeriod(Days period) {
         return periodicStatistics.stream()
                 .filter(stats -> stats.isForPeriod(period))
                 .map(PersonalPeriodStatistics::getTransactionCount)
