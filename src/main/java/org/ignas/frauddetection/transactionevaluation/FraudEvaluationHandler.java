@@ -11,6 +11,7 @@ import org.ignas.frauddetection.transactionevaluation.cache.GroupProbabilityCach
 import org.ignas.frauddetection.transactionevaluation.domain.Transaction;
 import org.ignas.frauddetection.transactionevaluation.domain.calculation.criteria.NamedCriteria;
 import org.ignas.frauddetection.transactionevaluation.domain.config.FraudCriteriaConfig;
+import org.ignas.frauddetection.transactionevaluation.domain.config.FraudCriteriaEvaluator;
 import org.ignas.frauddetection.transactionevaluation.domain.stats.HistoricalData;
 import org.ignas.frauddetection.transactionevaluation.service.FraudEvaluator;
 
@@ -23,6 +24,7 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
     private GroupProbabilityCache cache;
     private ServiceIntegration<Transaction, HistoricalData> transactionStatisticsIntegration;
     private ServiceIntegration<Map<String, String>, ProbabilityStatistics> probabilityStatisticsIntegration;
+    private static FraudCriteriaEvaluator evaluator = new FraudCriteriaEvaluator();
 
     public FraudEvaluationHandler(
         GroupProbabilityCache cache,
@@ -49,22 +51,13 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
             HistoricalData transactionDataHistory = data.result();
 
             Future<ProbabilityStatistics> probabilityStatistics =
-                probabilityStatisticsIntegration.load(mapToCriteriaValues(transactionData, transactionDataHistory));
+                probabilityStatisticsIntegration.load(evaluator.evaluateAll(transactionData, transactionDataHistory));
 
             probabilityStatistics.setHandler(
                 probabilityData -> event.reply(FraudEvaluator.evaluate(cache ,probabilityData.result())));
         });
     }
 
-
-    private Map<String, String> mapToCriteriaValues(Transaction transactionData, HistoricalData data) {
-        return FraudCriteriaConfig.definedCriterias()
-            .stream()
-            .collect(toMap(
-                NamedCriteria::name,
-                it -> it.evaluate(transactionData, data).representation())
-            );
-    }
 
     private Transaction mapToDomain(FraudEvaluationRequest request) {
         return new Transaction(
