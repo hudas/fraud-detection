@@ -10,9 +10,9 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.api.validation.HTTPRequestValidationHandler;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.TimeoutHandler;
+import org.ignas.frauddetection.httpapi.integration.ProbabilityCalculatorIntegration;
 
 public class EvaluationRequestController extends AbstractVerticle {
-
 
     public static final int DEFAULT_TIMEOUT = 1000;
     public static final int SERVER_PORT = 8080;
@@ -37,7 +37,7 @@ public class EvaluationRequestController extends AbstractVerticle {
     }
 
     private Router buildRouter(String requestSchema) {
-        EventBus eb = vertx.eventBus();
+        EventBus bus = vertx.eventBus();
 
         Router router = Router.router(vertx);
 
@@ -45,7 +45,7 @@ public class EvaluationRequestController extends AbstractVerticle {
             .handler(BodyHandler.create())
             .handler(HTTPRequestValidationHandler.create().addJsonBodySchema(requestSchema))
             .handler(TimeoutHandler.create(DEFAULT_TIMEOUT, 500))
-            .handler(new EvaluationRequestHandler(eb))
+            .handler(new EvaluationRequestHandler(new ProbabilityCalculatorIntegration(bus)))
             .failureHandler(new EvaluationRequestFailureHandler());
 
         return router;

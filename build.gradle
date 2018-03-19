@@ -1,9 +1,20 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.junit.platform:junit-platform-gradle-plugin:1.1.0'
+    }
+}
+
 plugins {
     id 'java'
     id 'application'
     id 'com.github.johnrengelman.shadow' version '1.2.3'
     id 'idea'
 }
+
+apply plugin: 'org.junit.platform.gradle.plugin'
 
 repositories {
     jcenter()
@@ -12,18 +23,15 @@ repositories {
 
 ext {
     vertxVersion = '3.5.1'
+    mockitoVersion = '2.16.0'
+    junitVersion = '5.1.0'
+
+    jodaMapperVersion = '2.7.4'
+    jdk8MapperVersion = '2.4.0'
 }
 
 version = '0.0.0'
 sourceCompatibility = '1.8'
-
-dependencies {
-    compile "io.vertx:vertx-core:${vertxVersion}"
-    compile "io.vertx:vertx-web:${vertxVersion}"
-    compile "io.vertx:vertx-web-api-contract:${vertxVersion}"
-    compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.4.0"
-    compile "com.fasterxml.jackson.datatype:jackson-datatype-joda:2.7.4"
-}
 
 mainClassName = 'org.ignas.frauddetection.DetectionLauncher'
 
@@ -42,4 +50,16 @@ idea {
     project {
         languageLevel = sourceCompatibility
     }
+}
+
+dependencies {
+    compile "io.vertx:vertx-core:${vertxVersion}"
+    compile "io.vertx:vertx-web:${vertxVersion}"
+    compile "io.vertx:vertx-web-api-contract:${vertxVersion}"
+
+    compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jdk8MapperVersion}"
+    compile "com.fasterxml.jackson.datatype:jackson-datatype-joda:${jodaMapperVersion}"
+
+    testCompile "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    testCompile "org.mockito:mockito-core:${mockitoVersion}"
 }
