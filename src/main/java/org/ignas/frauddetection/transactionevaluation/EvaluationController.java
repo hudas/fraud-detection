@@ -3,47 +3,21 @@ package org.ignas.frauddetection.transactionevaluation;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
-import org.apache.http.HttpStatus;
 import org.ignas.frauddetection.probabilitystatistics.api.request.CriteriaGroupProbabilityRequest;
 import org.ignas.frauddetection.probabilitystatistics.api.request.CriteriaProbabilityRequest;
-import org.ignas.frauddetection.probabilitystatistics.api.response.ProbabilityStatistics;
-import org.ignas.frauddetection.shared.FraudCriteriaGroup;
 import org.ignas.frauddetection.shared.ImmutableObjectCodec;
 import org.ignas.frauddetection.transactionevaluation.api.request.FraudEvaluationRequest;
 import org.ignas.frauddetection.transactionevaluation.cache.GroupProbabilityCache;
-import org.ignas.frauddetection.transactionevaluation.domain.Transaction;
-import org.ignas.frauddetection.transactionevaluation.domain.calculation.criteria.NamedCriteria;
-import org.ignas.frauddetection.transactionevaluation.domain.config.FraudCriteriaConfig;
-import org.ignas.frauddetection.transactionevaluation.domain.stats.DebtorStatistics;
-import org.ignas.frauddetection.transactionevaluation.domain.stats.EnvironmentStatistics;
-import org.ignas.frauddetection.transactionevaluation.domain.stats.GlobalStatistics;
-import org.ignas.frauddetection.transactionevaluation.domain.stats.HistoricalData;
-import org.ignas.frauddetection.transactionevaluation.domain.stats.details.*;
-import org.ignas.frauddetection.transactionevaluation.integration.BayesProbabilityIntegration;
-import org.ignas.frauddetection.transactionevaluation.integration.TransactionStatisticsIntegration;
-import org.ignas.frauddetection.transactionevaluation.service.FraudEvaluator;
-import org.ignas.frauddetection.transactionstatistics.api.request.StatisticsRequest;
-import org.ignas.frauddetection.transactionstatistics.api.response.CredibilityScore;
-import org.ignas.frauddetection.transactionstatistics.api.response.PersonalPeriod;
-import org.ignas.frauddetection.transactionstatistics.api.response.Statistics;
-import org.ignas.frauddetection.transactionstatistics.api.response.generalindicators.DistanceDifferenceStatistics;
-import org.ignas.frauddetection.transactionstatistics.api.response.generalindicators.TimeDifferenceStatistics;
-import org.joda.time.Days;
-import org.joda.time.Seconds;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.*;
+import org.ignas.frauddetection.transactionevaluation.integration.CriteriaProbabilityLoader;
+import org.ignas.frauddetection.transactionevaluation.integration.FraudProbabilityLoader;
+import org.ignas.frauddetection.transactionevaluation.integration.TransactionStatisticsLoader;
 
 public class EvaluationController extends AbstractVerticle {
 
     public static final int CACHE_TTL = 10000;
 
     @Override
-    public void start(Future<Void> setupFuture) throws Exception {
+    public void start(Future<Void> setupFuture) {
         EventBus bus = vertx.eventBus();
 
         registerCodecs(bus);
@@ -60,8 +34,8 @@ public class EvaluationController extends AbstractVerticle {
                     .handler(
                         new FraudEvaluationHandler(
                             cache,
-                            new TransactionStatisticsIntegration(bus),
-                            new BayesProbabilityIntegration(bus))
+                            new TransactionStatisticsLoader(bus),
+                            new CriteriaProbabilityLoader(bus))
                     );
 
                 setupFuture.complete();

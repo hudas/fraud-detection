@@ -1,9 +1,5 @@
-package org.ignas.frauddetection.transactionevaluation.integration;
+package org.ignas.frauddetection.transactionevaluation.integration.converters;
 
-import io.vertx.core.Future;
-import io.vertx.core.eventbus.EventBus;
-import org.apache.http.HttpStatus;
-import org.ignas.frauddetection.shared.ServiceIntegration;
 import org.ignas.frauddetection.transactionevaluation.domain.Transaction;
 import org.ignas.frauddetection.transactionevaluation.domain.stats.DebtorStatistics;
 import org.ignas.frauddetection.transactionevaluation.domain.stats.EnvironmentStatistics;
@@ -26,34 +22,9 @@ import java.util.List;
 
 import static java.util.stream.Collectors.toList;
 
-public class TransactionStatisticsIntegration implements ServiceIntegration<Transaction, HistoricalData>{
+public class StatisticsAPIConverter {
 
-    private EventBus bus;
-
-    public TransactionStatisticsIntegration(EventBus bus) {
-        this.bus = bus;
-    }
-
-    @Override
-    public Future<HistoricalData> load(Transaction request) {
-        Future<HistoricalData> loader = Future.future();
-
-        bus.send("transaction-statistic.archive", mapToAPI(request), statisticsResponse -> {
-
-                if (!(statisticsResponse.result().body() instanceof Statistics)) {
-                    statisticsResponse.result()
-                        .fail(HttpStatus.SC_BAD_REQUEST,
-                            "Unsupported message type: " + statisticsResponse.result().getClass());
-                    throw new IllegalStateException("Unsupported message type: " + statisticsResponse.result().getClass());
-                }
-
-                loader.complete(mapToDomain((Statistics) statisticsResponse.result().body()));
-            });
-
-        return loader;
-    }
-
-    private HistoricalData mapToDomain(Statistics historicalData) {
+    public static HistoricalData mapResponse(Statistics historicalData) {
         GlobalStatistics globalStats = new GlobalStatistics(
             sumStatsFromDTO(historicalData),
             ratioStatsFromDTO(historicalData),
@@ -74,7 +45,7 @@ public class TransactionStatisticsIntegration implements ServiceIntegration<Tran
         return new HistoricalData(debtorStats, globalStats, environmentStats);
     }
 
-    private StatisticsRequest mapToAPI(Transaction transactionData) {
+    public static StatisticsRequest mapRequest(Transaction transactionData) {
         return new StatisticsRequest(
             transactionData.getDebtor(),
             transactionData.getCreditor(),
@@ -84,8 +55,7 @@ public class TransactionStatisticsIntegration implements ServiceIntegration<Tran
     }
 
 
-
-    private DebtorStatistics debtorFromDTO(Statistics statistics) {
+    private static DebtorStatistics debtorFromDTO(Statistics statistics) {
         return new DebtorStatistics(
             statistics.getDebtorStatistics().getMostUsedLocation(),
             statistics.getDebtorStatistics().getLastTransactionLocation(),
@@ -93,14 +63,14 @@ public class TransactionStatisticsIntegration implements ServiceIntegration<Tran
             statistics.getDebtorStatistics().getLastTransactionExecutionTime(),
             Seconds.seconds(statistics.getDebtorStatistics().getMinTimeBetweenTransactions()),
             statistics.getDebtorStatistics().getPeriodicStatistics().stream()
-                .map(this::personalPeriodFromDTO)
+                .map(StatisticsAPIConverter::personalPeriodFromDTO)
                 .collect(toList())
         );
     }
 
 
 
-    private PersonalPeriodStatistics personalPeriodFromDTO(PersonalPeriod stats) {
+    private static PersonalPeriodStatistics personalPeriodFromDTO(PersonalPeriod stats) {
         return new PersonalPeriodStatistics(
             Days.days(stats.getPeriodLength()),
             stats.getExpensesSum(),
@@ -109,7 +79,7 @@ public class TransactionStatisticsIntegration implements ServiceIntegration<Tran
     }
 
 
-    private FraudRate fraudRateFromDTO(CredibilityScore creditorScore) {
+    private static FraudRate fraudRateFromDTO(CredibilityScore creditorScore) {
         return new FraudRate(
             creditorScore.getFraudRate(),
             creditorScore.getFraudRateAverage(),
@@ -124,7 +94,7 @@ public class TransactionStatisticsIntegration implements ServiceIntegration<Tran
      * @param statistics
      * @return
      */
-    private MeanStatistics<Float> distanceStatsFromDTO(Statistics statistics) {
+    private static MeanStatistics<Float> distanceStatsFromDTO(Statistics statistics) {
         DistanceDifferenceStatistics stats = statistics.getPublicStatistics().getDistance()
             .stream()
             .findFirst()
@@ -135,7 +105,7 @@ public class TransactionStatisticsIntegration implements ServiceIntegration<Tran
             .build();
     }
 
-    private MeanStatistics<Seconds> timeStatsFromDTO(Statistics statistics) {
+    private static MeanStatistics<Seconds> timeStatsFromDTO(Statistics statistics) {
         TimeDifferenceStatistics stats = statistics.getPublicStatistics().getTime()
             .stream()
             .findFirst()
@@ -147,7 +117,7 @@ public class TransactionStatisticsIntegration implements ServiceIntegration<Tran
             .build();
     }
 
-    private List<MeanPeriodStatistics<Float>> ratioStatsFromDTO(Statistics historicalData) {
+    private static List<MeanPeriodStatistics<Float>> ratioStatsFromDTO(Statistics historicalData) {
         return historicalData.getPublicStatistics()
             .getSumRatio()
             .stream()
@@ -158,7 +128,7 @@ public class TransactionStatisticsIntegration implements ServiceIntegration<Tran
             .collect(toList());
     }
 
-    private List<MeanPeriodStatistics<Integer>> countStatsFromDTO(Statistics statistics) {
+    private static List<MeanPeriodStatistics<Integer>> countStatsFromDTO(Statistics statistics) {
         return statistics.getPublicStatistics()
             .getCount()
             .stream()
@@ -170,7 +140,7 @@ public class TransactionStatisticsIntegration implements ServiceIntegration<Tran
             .collect(toList());
     }
 
-    private List<MeanPeriodStatistics<Float>> sumStatsFromDTO(Statistics statistics) {
+    private static List<MeanPeriodStatistics<Float>> sumStatsFromDTO(Statistics statistics) {
         return statistics.getPublicStatistics()
             .getSum()
             .stream()
