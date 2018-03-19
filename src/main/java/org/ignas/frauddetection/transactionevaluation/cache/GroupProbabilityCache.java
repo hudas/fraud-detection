@@ -1,9 +1,14 @@
 package org.ignas.frauddetection.transactionevaluation.cache;
 
 import io.vertx.core.Future;
+import org.ignas.frauddetection.shared.FraudCriteriaGroup;
+import org.ignas.frauddetection.shared.ServiceIntegration;
 import org.ignas.frauddetection.transactionevaluation.domain.CriteriaGroup;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * The most popular cache implementations such as Guava, Ehcache etc does not support fully async API
@@ -12,15 +17,11 @@ import java.util.Map;
  */
 public class GroupProbabilityCache {
 
-    public interface CacheLoader<T> {
-        Future<T> load();
-    }
-
     private Map<String, CriteriaGroup> CACHED_VALUES;
 
-    private CacheLoader<Map<String, CriteriaGroup>> loader;
+    private ServiceIntegration<List<String>, Map<String, CriteriaGroup>> loader;
 
-    public GroupProbabilityCache(CacheLoader<Map<String, CriteriaGroup>> loader) {
+    public GroupProbabilityCache(ServiceIntegration<List<String>, Map<String, CriteriaGroup>> loader) {
         this.loader = loader;
     }
 
@@ -32,9 +33,10 @@ public class GroupProbabilityCache {
     public Future reload() {
         Future future = Future.future();
 
-        this.loader.load()
+        this.loader.load(getCriteriaGroupNames())
+            .otherwise(this.CACHED_VALUES)
             .setHandler(result -> {
-                this.CACHED_VALUES = result.otherwise(this.CACHED_VALUES).result();
+                this.CACHED_VALUES = result.result();
                 future.complete();
             });
 
@@ -47,5 +49,11 @@ public class GroupProbabilityCache {
         }
 
         return CACHED_VALUES.get(group).eventProbability(eventValue);
+    }
+
+    private List<String> getCriteriaGroupNames() {
+        return Arrays.stream(FraudCriteriaGroup.values())
+            .map(Enum::name)
+            .collect(Collectors.toList());
     }
 }

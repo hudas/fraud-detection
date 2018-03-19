@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.*;
 
-public class FraudCriteriaResolver extends AbstractVerticle {
+public class EvaluationController extends AbstractVerticle {
 
     public static final int CACHE_TTL = 10000;
 
@@ -48,9 +48,7 @@ public class FraudCriteriaResolver extends AbstractVerticle {
 
         registerCodecs(bus);
 
-        GroupProbabilityCache cache = new GroupProbabilityCache(
-            new FraudProbabilityLoader(bus, getCriteriaGroupNames())
-        );
+        GroupProbabilityCache cache = new GroupProbabilityCache(new FraudProbabilityLoader(bus));
 
         cache.reload()
             .setHandler(cachePrepared -> {
@@ -69,13 +67,6 @@ public class FraudCriteriaResolver extends AbstractVerticle {
                 setupFuture.complete();
         });
     }
-
-    private List<String> getCriteriaGroupNames() {
-        return Arrays.stream(FraudCriteriaGroup.values())
-                .map(Enum::name)
-                .collect(Collectors.toList());
-    }
-
 
     private void registerCodecs(EventBus bus) {
         bus.registerDefaultCodec(
