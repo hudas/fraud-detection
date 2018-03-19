@@ -21,19 +21,19 @@ public class EvaluationRequestController extends AbstractVerticle {
     public void start(Future<Void> verticeStartup) {
         registerDateMapper();
 
-        String validationSchema = new ConfigurationProvider(vertx)
+        new ConfigurationProvider(vertx)
             .loadApiSchema()
-            .result();
+            .setHandler(validationSchema -> {
+                Router router = buildRouter(validationSchema.result());
 
-        Router router = buildRouter(validationSchema);
+                vertx.createHttpServer()
+                    .requestHandler(router::accept)
+                    .listen(SERVER_PORT);
 
-        vertx.createHttpServer()
-            .requestHandler(router::accept)
-            .listen(SERVER_PORT);
+                System.out.println("HTTP server started on port " + SERVER_PORT);
 
-        System.out.println("HTTP server started on port " + SERVER_PORT);
-
-        verticeStartup.complete();
+                verticeStartup.complete();
+            });
     }
 
     private Router buildRouter(String requestSchema) {
