@@ -18,14 +18,12 @@ import org.joda.time.Seconds;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 import static com.google.common.collect.ImmutableList.of;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FraudCriteriaEvaluatorTest {
-
-    @Test
-    void evaluateAll() {
-    }
 
     @Test
     void evaluateNonExistingCriterion() {
@@ -210,7 +208,7 @@ class FraudCriteriaEvaluatorTest {
 
 
     @Test
-    void evaluateAmountRation() {
+    void evaluateAmountRatio() {
         FraudCriteriaEvaluator evaluator = new FraudCriteriaEvaluator();
 
         Transaction transaction = new Transaction("any", 15f, null, null, null, null);
@@ -604,5 +602,107 @@ class FraudCriteriaEvaluatorTest {
 
     @Test
     void resolveGroup() {
+        FraudCriteriaEvaluator evaluator = new FraudCriteriaEvaluator();
+
+        String averageSumGroupDay = evaluator.resolveGroup("AVERAGE_SUM/P1D");
+        String averageSumGroupWeek = evaluator.resolveGroup("AVERAGE_SUM/P7D");
+        String averageSumGroupMonth = evaluator.resolveGroup("AVERAGE_SUM/P30D");
+
+        String expectedSumGroup = evaluator.resolveGroup("EXPECTED_SUM/P1D");
+        String averageCountGroup = evaluator.resolveGroup("AVERAGE_COUNT/P1D");
+        String expectedCountGroup = evaluator.resolveGroup("EXPECTED_COUNT/P1D");
+        String averageRatioGroup = evaluator.resolveGroup("AVERAGE_PERIOD_AMOUNT_RATIO/P7D");
+        String maxAmountGroup = evaluator.resolveGroup("MAX_SPENT_AMOUNT");
+        String categoryGroup = evaluator.resolveGroup("AMOUNT_CATEGORY");
+
+        String timeGroup = evaluator.resolveGroup("TIME_RISK");
+        String minTimeBetweenGroup = evaluator.resolveGroup("MIN_TIME_BETWEEN_TRANSACTIONS");
+        String averageTimeBetweenGroup = evaluator.resolveGroup("AVERAGE_TIME_BETWEEN_TRANSACTIONS");
+        String expectedTimeBetweenGroup = evaluator.resolveGroup("EXPECTED_TIME_BETWEEN_TRANSACTIONS");
+
+        String locationGroup = evaluator.resolveGroup("LOCATION_RISK");
+        String averageDistanceCommonGroup = evaluator.resolveGroup("AVERAGE_DISTANCE_FROM_COMMON_LOCATION");
+        String averageDistanceLastGroup = evaluator.resolveGroup("AVERAGE_DISTANCE_FROM_LAST_LOCATION");
+        String creditorGroup = evaluator.resolveGroup("CREDITOR_RISK");
+
+        Assertions.assertEquals("AMOUNT", averageSumGroupDay);
+        Assertions.assertEquals("AMOUNT", averageSumGroupWeek);
+        Assertions.assertEquals("AMOUNT", averageSumGroupMonth);
+        Assertions.assertEquals("AMOUNT", expectedSumGroup);
+        Assertions.assertEquals("AMOUNT", averageRatioGroup);
+        Assertions.assertEquals("AMOUNT", maxAmountGroup);
+        Assertions.assertEquals("AMOUNT", categoryGroup);
+
+        Assertions.assertEquals("COUNT", averageCountGroup);
+        Assertions.assertEquals("COUNT", expectedCountGroup);
+        Assertions.assertEquals("COUNT", expectedCountGroup);
+
+        Assertions.assertEquals("TIME", timeGroup);
+        Assertions.assertEquals("TIME", minTimeBetweenGroup);
+        Assertions.assertEquals("TIME", averageTimeBetweenGroup);
+        Assertions.assertEquals("TIME", expectedTimeBetweenGroup);
+
+        Assertions.assertEquals("LOCATION", locationGroup);
+        Assertions.assertEquals("LOCATION", averageDistanceCommonGroup);
+        Assertions.assertEquals("LOCATION", averageDistanceLastGroup);
+        Assertions.assertEquals("LOCATION", creditorGroup);
+    }
+
+    @Test
+    void evaluateAll() {
+        Transaction transaction = new Transaction(
+            "any",
+            1f,
+            "LTDebtor",
+            "LTCreditor",
+            new Location(54.0000f, 25.0000f),
+            LocalDateTime.parse("2018-03-20T10:45:31")
+        );
+
+        HistoricalData data = new HistoricalData(
+            new DebtorStatistics(
+                new Location(54.1234f, 25.1234f),
+                new Location(54.1234f, 25.1234f),
+                1150f,
+                LocalDateTime.parse("2018-03-20T08:00:11"),
+                Seconds.seconds(1800),
+                of(
+                    new PersonalPeriodStatistics(Days.days(1), 10f, 2),
+                    new PersonalPeriodStatistics(Days.days(7), 300f, 5),
+                    new PersonalPeriodStatistics(Days.days(30), 650f, 20)
+                )
+            ),
+            new GlobalStatistics(
+                of(
+                    MeanPeriodStatistics.<Float>builder(Days.days(1)).pastValues(20f, 5f).expectedValues(15f, 5f).build(),
+                    MeanPeriodStatistics.<Float>builder(Days.days(7)).pastValues(100f, 25f).expectedValues(260f, 50f).build(),
+                    MeanPeriodStatistics.<Float>builder(Days.days(30)).pastValues(500f, 100f).expectedValues(740f, 100f).build()
+                ),
+                of(
+                    MeanPeriodStatistics.<Float>builder(Days.days(1)).pastValues(0.8f, 0.3f).build(),
+                    MeanPeriodStatistics.<Float>builder(Days.days(7)).pastValues(0.1f, 0.05f).build(),
+                    MeanPeriodStatistics.<Float>builder(Days.days(30)).pastValues(0.03f, 0.01f).build()
+                ),
+                of(
+                    MeanPeriodStatistics.<Float>builder(Days.days(1)).pastValues(0.5f, 0.3f).expectedValues(0.7f, 0.3f).build(),
+                    MeanPeriodStatistics.<Float>builder(Days.days(7)).pastValues(10f, 2f).expectedValues(6f, 2f).build(),
+                    MeanPeriodStatistics.<Float>builder(Days.days(30)).pastValues(30f, 5f).expectedValues(30f, 5f).build()
+                ),
+                MeanStatistics.<Seconds>builder().pastValues(Seconds.seconds(18000), Seconds.seconds(7200)).expectedValues(Seconds.seconds(24000), Seconds.seconds(7200)).build(),
+                MeanStatistics.<Float>builder().pastValues(0.5f, 0.2f).build(),
+                MeanStatistics.<Float>builder().pastValues(0.5f, 0.2f).build()
+            ),
+            new EnvironmentStatistics(
+                new FraudRate(0.0001f, 0.0002f, 0.00005f),
+                new FraudRate(0.0001f, 0.0002f, 0.00005f),
+                new FraudRate(0.005f, 0.002f, 0.001f)
+            )
+        );
+
+        FraudCriteriaEvaluator evaluator = new FraudCriteriaEvaluator();
+
+        Map<String, String> result = evaluator.evaluateAll(transaction, data);
+
+        Assertions.assertEquals(25, result.size());
     }
 }
