@@ -28,6 +28,8 @@ ext {
 
     jodaMapperVersion = '2.7.4'
     jdk8MapperVersion = '2.4.0'
+
+    mongoDriverVersion = '3.6.3'
 }
 
 version = '0.0.0'
@@ -59,6 +61,8 @@ dependencies {
 
     compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${jdk8MapperVersion}"
     compile "com.fasterxml.jackson.datatype:jackson-datatype-joda:${jodaMapperVersion}"
+    compile "org.mongodb:mongodb-driver-async:${mongoDriverVersion}"
+
 
     testCompile "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
     testCompile "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
