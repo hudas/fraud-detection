@@ -13,7 +13,7 @@ import static java.util.stream.Collectors.toMap;
 public class FraudCriteriaEvaluator {
 
     // Idea behind this, is to build inverted hash map which helps to resolve criteria group by criteria name.
-    final Map<String, String> CRITERIA_GROUP_CACHE;
+    private final Map<String, String> CRITERIA_GROUP_CACHE;
 
     private FraudCriteriaConfig criteriaConfig;
 

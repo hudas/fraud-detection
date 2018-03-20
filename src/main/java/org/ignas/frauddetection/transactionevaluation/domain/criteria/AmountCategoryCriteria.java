@@ -28,7 +28,7 @@ public enum AmountCategoryCriteria implements PrintableResult {
         }
     },
 
-    VERY_BIG_AMOUNT(atLeast(500f)) {
+    VERY_BIG_AMOUNT(greaterThan(500f)) {
         @Override
         public String representation() {
             return name();
@@ -41,7 +41,7 @@ public enum AmountCategoryCriteria implements PrintableResult {
     AmountCategoryCriteria(Range<Float> range) {
         this.range = range;
     }
-    
+
     public boolean abstracts(Float deviationRate) {
         return this.range.contains(deviationRate);
     }

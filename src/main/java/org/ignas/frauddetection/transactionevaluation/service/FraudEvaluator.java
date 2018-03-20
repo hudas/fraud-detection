@@ -5,6 +5,7 @@ import org.ignas.frauddetection.probabilitystatistics.api.response.ProbabilitySt
 import org.ignas.frauddetection.transactionevaluation.cache.GroupProbabilityCache;
 import org.ignas.frauddetection.transactionevaluation.domain.Risk;
 import org.ignas.frauddetection.transactionevaluation.domain.config.FraudCriteriaConfig;
+import org.ignas.frauddetection.transactionevaluation.domain.config.FraudCriteriaEvaluator;
 
 import java.util.List;
 import java.util.Map;
@@ -13,7 +14,13 @@ import static java.util.stream.Collectors.*;
 
 public class FraudEvaluator {
 
-    public static Float evaluate(GroupProbabilityCache cache, ProbabilityStatistics criteriaProbabilities) {
+    private FraudCriteriaEvaluator criteriaEvaluator;
+
+    public FraudEvaluator(FraudCriteriaEvaluator criteriaEvaluator) {
+        this.criteriaEvaluator = criteriaEvaluator;
+    }
+
+    public Float evaluate(GroupProbabilityCache cache, ProbabilityStatistics criteriaProbabilities) {
         Float fraudProbability = criteriaProbabilities.getFraudProbability();
 
         Map<String, List<Float>> criteriaGroupProbabilities = criteriaProbabilities.getCriteriaProbabilites()
@@ -21,7 +28,7 @@ public class FraudEvaluator {
             .stream()
             .collect(
                 groupingBy(
-                    it -> FraudCriteriaConfig.resolveGroup(it.getKey()),
+                    it -> criteriaEvaluator.resolveGroup(it.getKey()),
                     mapping(Map.Entry::getValue, toList()))
             );
 
@@ -39,7 +46,7 @@ public class FraudEvaluator {
             .reduce(fraudProbability, (result, increment) -> result * increment);
     }
 
-    private static Risk mapToRisk(String key, List<Float> probabilities, Map<String, CriteriaGroupRisk> groupStatistics) {
+    private Risk mapToRisk(String key, List<Float> probabilities, Map<String, CriteriaGroupRisk> groupStatistics) {
         CriteriaGroupRisk groupRiskStatistics = groupStatistics.get(key);
 
         return new Risk(

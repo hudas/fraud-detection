@@ -24,7 +24,9 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
     private GroupProbabilityCache cache;
     private ServiceIntegration<Transaction, HistoricalData> transactionStatisticsIntegration;
     private ServiceIntegration<Map<String, String>, ProbabilityStatistics> probabilityStatisticsIntegration;
-    private static FraudCriteriaEvaluator evaluator = new FraudCriteriaEvaluator();
+
+    private static FraudCriteriaEvaluator criteriaEvaluator = new FraudCriteriaEvaluator();
+    private static FraudEvaluator evaluator = new FraudEvaluator(criteriaEvaluator);
 
     public FraudEvaluationHandler(
         GroupProbabilityCache cache,
@@ -51,10 +53,10 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
             HistoricalData transactionDataHistory = data.result();
 
             Future<ProbabilityStatistics> probabilityStatistics =
-                probabilityStatisticsIntegration.load(evaluator.evaluateAll(transactionData, transactionDataHistory));
+                probabilityStatisticsIntegration.load(criteriaEvaluator.evaluateAll(transactionData, transactionDataHistory));
 
             probabilityStatistics.setHandler(
-                probabilityData -> event.reply(FraudEvaluator.evaluate(cache ,probabilityData.result())));
+                probabilityData -> event.reply(evaluator.evaluate(cache ,probabilityData.result())));
         });
     }
 

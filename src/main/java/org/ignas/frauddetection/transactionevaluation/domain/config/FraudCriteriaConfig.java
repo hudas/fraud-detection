@@ -33,21 +33,21 @@ public class FraudCriteriaConfig {
 
     public FraudCriteriaConfig() {
         CRITERIA = ImmutableList.<NamedCriteria>builder()
-            .add(defineCreditorCriterion())
-            .add(defineLocationCriterion())
-            .add(defineCommonDistanceCriterion())
-            .add(defineLastTransactionDistanceCriterion())
-            .add(defineTimeRiskCriterion())
-            .add(defineTimeBetweenTransactionsCriterion())
-            .add(defineExpectedTimeBetweenTransactionsCriterion())
-            .add(defineMinTimeBetweenTransactionsCriterion())
-            .addAll(defineCountCriteria())
-            .addAll(defineExpectedCountCriteria())
             .addAll(defineAmountCriteria())
             .addAll(defineExpectedAmountCriteria())
+            .addAll(defineCountCriteria())
+            .addAll(defineExpectedCountCriteria())
             .addAll(defineAmountRatio())
             .add(defineMaxSpentAmount())
             .add(defineAmountCategory())
+            .add(defineTimeRiskCriterion())
+            .add(defineMinTimeBetweenTransactionsCriterion())
+            .add(defineTimeBetweenTransactionsCriterion())
+            .add(defineExpectedTimeBetweenTransactionsCriterion())
+            .add(defineLocationCriterion())
+            .add(defineCommonDistanceCriterion())
+            .add(defineLastTransactionDistanceCriterion())
+            .add(defineCreditorCriterion())
             .build();
     }
 
@@ -147,7 +147,7 @@ public class FraudCriteriaConfig {
                 LocalDateTime executionTime = transaction.getTime();
 
                 Seconds timeBetween =
-                    Seconds.secondsBetween(executionTime, previousTransactionTime);
+                    Seconds.secondsBetween(previousTransactionTime, executionTime);
 
                 MeanStatistics<Seconds> time = statistics.getGlobal().getTimeDifference();
 
@@ -170,7 +170,7 @@ public class FraudCriteriaConfig {
                 LocalDateTime executionTime = transaction.getTime();
 
                 Seconds timeBetween =
-                    Seconds.secondsBetween(executionTime, previousTransactionTime);
+                    Seconds.secondsBetween(previousTransactionTime, executionTime);
 
                 MeanStatistics<Seconds> time = statistics.getGlobal().getTimeDifference();
 
@@ -297,10 +297,9 @@ public class FraudCriteriaConfig {
             .period(Days.ONE, Days.SEVEN, Days.days(30))
             .calculator(new DeviationEvaluator())
             .mapper((Days period, Transaction transaction, HistoricalData statistics) -> {
-                float alreadyInitiatedTransactions = statistics.getDebtor()
-                    .getExpensesForPeriod(period);
+                float totalAmountForPeriod = transaction.getAmount() + statistics.getDebtor().getExpensesForPeriod(period);
 
-                float amountRatio = transaction.getAmount() / alreadyInitiatedTransactions;
+                float amountRatio = transaction.getAmount() / totalAmountForPeriod;
 
                 MeanPeriodStatistics<Float> globalRatioDetails = statistics.getGlobal()
                     .ratioStatisticsForPeriod(period);
