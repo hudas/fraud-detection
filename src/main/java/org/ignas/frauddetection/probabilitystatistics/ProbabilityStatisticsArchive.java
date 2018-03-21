@@ -12,11 +12,12 @@ import org.ignas.frauddetection.probabilitystatistics.api.response.BayesTable;
 import org.ignas.frauddetection.probabilitystatistics.api.response.CriteriaGroupRisk;
 import org.ignas.frauddetection.probabilitystatistics.api.response.ProbabilityStatistics;
 import org.ignas.frauddetection.shared.ImmutableObjectCodec;
+import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
 import org.ignas.frauddetection.transactionstatistics.api.request.StatisticsRequest;
 
 import java.util.Map;
 
-public class ProbabilityStatisticArchive extends AbstractVerticle {
+public class ProbabilityStatisticsArchive extends AbstractVerticle {
 
     private Map<String, Map<String, Float>> groupValues = ImmutableMap.<String, Map<String, Float>>builder()
         .put("AMOUNT", ImmutableMap.of("VERY_LOW_RISK", 1f, "LOW_RISK", 1f, "EXPECTED_RISK", 1f, "HIGH_RISK", 1f, "VERY_HIGH_RISK", 1f))

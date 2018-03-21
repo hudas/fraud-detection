@@ -5,7 +5,7 @@ import org.joda.time.LocalDateTime;
 
 import java.math.BigDecimal;
 
-public class FraudEvaluationRequest {
+public class TransactionData {
 
     private String transactionId;
 
@@ -19,10 +19,10 @@ public class FraudEvaluationRequest {
 
     private LocalDateTime time;
 
-    public FraudEvaluationRequest() {
+    public TransactionData() {
     }
 
-    public FraudEvaluationRequest(
+    public TransactionData(
             String transactionId,
             BigDecimal amount,
             String debtorId,

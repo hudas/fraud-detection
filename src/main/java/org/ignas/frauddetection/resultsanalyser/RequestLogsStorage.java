@@ -1,14 +1,10 @@
 package org.ignas.frauddetection.resultsanalyser;
 
-import com.google.common.collect.ImmutableList;
 import com.mongodb.async.client.MongoClient;
 import com.mongodb.async.client.MongoClients;
 import com.mongodb.async.client.MongoCollection;
 import com.mongodb.client.model.InsertManyOptions;
 import org.bson.Document;
-import org.bson.codecs.configuration.CodecRegistries;
-import org.bson.codecs.configuration.CodecRegistry;
-import org.bson.codecs.pojo.PojoCodecProvider;
 import org.ignas.frauddetection.resultsanalyser.api.ResultLoggingRequest;
 
 import java.util.ArrayList;

@@ -6,10 +6,13 @@ import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.probabilitystatistics.api.request.CriteriaGroupProbabilityRequest;
 import org.ignas.frauddetection.probabilitystatistics.api.request.CriteriaProbabilityRequest;
 import org.ignas.frauddetection.shared.ImmutableObjectCodec;
-import org.ignas.frauddetection.transactionevaluation.api.request.FraudEvaluationRequest;
+import org.ignas.frauddetection.shared.OneWayServiceIntegration;
+import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
+import org.ignas.frauddetection.transactionevaluation.api.request.TransactionData;
 import org.ignas.frauddetection.transactionevaluation.cache.GroupProbabilityCache;
 import org.ignas.frauddetection.transactionevaluation.integration.CriteriaProbabilityLoader;
 import org.ignas.frauddetection.transactionevaluation.integration.FraudProbabilityLoader;
+import org.ignas.frauddetection.transactionevaluation.integration.LearningInitiationIntegration;
 import org.ignas.frauddetection.transactionevaluation.integration.TransactionStatisticsLoader;
 
 public class EvaluationController extends AbstractVerticle {
@@ -35,7 +38,9 @@ public class EvaluationController extends AbstractVerticle {
                         new FraudEvaluationHandler(
                             cache,
                             new TransactionStatisticsLoader(bus),
-                            new CriteriaProbabilityLoader(bus))
+                            new CriteriaProbabilityLoader(bus),
+                            new LearningInitiationIntegration(bus)
+                        )
                     );
 
                 setupFuture.complete();
@@ -54,8 +59,13 @@ public class EvaluationController extends AbstractVerticle {
         );
 
         bus.registerDefaultCodec(
-            FraudEvaluationRequest.class,
-            new ImmutableObjectCodec<>(FraudEvaluationRequest.class)
+            TransactionData.class,
+            new ImmutableObjectCodec<>(TransactionData.class)
+        );
+
+        bus.registerDefaultCodec(
+            LearningRequest.class,
+            new ImmutableObjectCodec<>(LearningRequest.class)
         );
     }
 }

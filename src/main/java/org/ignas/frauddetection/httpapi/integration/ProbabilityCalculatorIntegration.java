@@ -4,7 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.httpapi.request.EvaluationRequest;
 import org.ignas.frauddetection.shared.ServiceIntegration;
-import org.ignas.frauddetection.transactionevaluation.api.request.FraudEvaluationRequest;
+import org.ignas.frauddetection.transactionevaluation.api.request.TransactionData;
 
 public class ProbabilityCalculatorIntegration implements ServiceIntegration<EvaluationRequest, Float> {
 
@@ -31,8 +31,8 @@ public class ProbabilityCalculatorIntegration implements ServiceIntegration<Eval
         return loader;
     }
 
-    private static FraudEvaluationRequest toResolverAPI(EvaluationRequest domain) {
-        return new FraudEvaluationRequest(
+    private static TransactionData toResolverAPI(EvaluationRequest domain) {
+        return new TransactionData(
             domain.getTransactionId(),
             domain.getAmount(),
             domain.getDebtorAccountId(),

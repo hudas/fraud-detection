@@ -12,15 +12,15 @@ import java.util.Map;
 
 import static java.util.stream.Collectors.*;
 
-public class FraudEvaluator {
+public class GroupRiskEvaluator {
 
     private FraudCriteriaEvaluator criteriaEvaluator;
 
-    public FraudEvaluator(FraudCriteriaEvaluator criteriaEvaluator) {
+    public GroupRiskEvaluator(FraudCriteriaEvaluator criteriaEvaluator) {
         this.criteriaEvaluator = criteriaEvaluator;
     }
 
-    public Float evaluate(GroupProbabilityCache cache, ProbabilityStatistics criteriaProbabilities) {
+    public Map<String, Risk.Value> evaluate(ProbabilityStatistics criteriaProbabilities) {
         Float fraudProbability = criteriaProbabilities.getFraudProbability();
 
         Map<String, List<Float>> criteriaGroupProbabilities = criteriaProbabilities.getCriteriaProbabilites()
@@ -32,18 +32,13 @@ public class FraudEvaluator {
                     mapping(Map.Entry::getValue, toList()))
             );
 
-        Map<String, Risk.Value> groupRisks = criteriaGroupProbabilities.entrySet()
+        return criteriaGroupProbabilities.entrySet()
             .stream()
             .map(entry -> mapToRisk(
                 entry.getKey(),
                 entry.getValue(),
                 criteriaProbabilities.getGroupStatistics()))
             .collect(toMap(Risk::getGroupName, (group) -> group.evaluate(fraudProbability)));
-
-        return groupRisks.entrySet()
-            .stream()
-            .map(entry -> cache.getProbability(entry.getKey(), entry.getValue().name()))
-            .reduce(fraudProbability, (result, increment) -> result * increment);
     }
 
     private Risk mapToRisk(String key, List<Float> probabilities, Map<String, CriteriaGroupRisk> groupStatistics) {

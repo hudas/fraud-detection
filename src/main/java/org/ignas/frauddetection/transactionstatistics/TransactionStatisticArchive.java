@@ -3,6 +3,7 @@ package org.ignas.frauddetection.transactionstatistics;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.shared.ImmutableObjectCodec;
 import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionstatistics.api.request.StatisticsRequest;
@@ -59,12 +60,18 @@ public class TransactionStatisticArchive extends AbstractVerticle {
 
     @Override
     public void start() {
-        vertx.eventBus().registerDefaultCodec(StatisticsRequest.class, new ImmutableObjectCodec<>(StatisticsRequest.class));
-        vertx.eventBus().registerDefaultCodec(Statistics.class, new ImmutableObjectCodec<>(Statistics.class));
+        EventBus bus = vertx.eventBus();
 
-        vertx.eventBus().consumer("transaction-statistic.archive")
+        bus.registerDefaultCodec(StatisticsRequest.class, new ImmutableObjectCodec<>(StatisticsRequest.class));
+        bus.registerDefaultCodec(Statistics.class, new ImmutableObjectCodec<>(Statistics.class));
+
+        bus.consumer("transaction-statistic.archive")
+            .handler(message -> message.reply(TEMPORARY_HARDCODED_RESULT));
+
+        bus.consumer("learning.processing-request")
             .handler(message -> {
-                message.reply(TEMPORARY_HARDCODED_RESULT);
+
+                System.out.println("Received request to learn!");
             });
     }
 }
