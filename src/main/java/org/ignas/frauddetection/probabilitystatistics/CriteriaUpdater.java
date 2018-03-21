@@ -5,7 +5,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
-import org.ignas.frauddetection.probabilitystatistics.service.BatchProcessor;
+import org.ignas.frauddetection.probabilitystatistics.service.BatchedCriteriaProcessor;
 import org.ignas.frauddetection.probabilitystatistics.service.CriteriaStorage;
 
 
@@ -25,7 +25,7 @@ public class CriteriaUpdater extends AbstractVerticle {
             }
 
             BatchToProcess batch = (BatchToProcess) batchEvent.body();
-            storage.persist(BatchProcessor.parseCriteriaUpdates(batch));
+            storage.persist(BatchedCriteriaProcessor.parseCriteriaUpdates(batch));
         });
 
         startFuture.complete();

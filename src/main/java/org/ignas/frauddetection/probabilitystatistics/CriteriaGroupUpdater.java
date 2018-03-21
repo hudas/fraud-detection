@@ -4,19 +4,16 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
-import org.ignas.frauddetection.probabilitystatistics.domain.CriteriaUpdate;
-import org.ignas.frauddetection.probabilitystatistics.service.BatchProcessor;
-import org.ignas.frauddetection.probabilitystatistics.service.CriteriaGroupStorage;
-import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
+import org.ignas.frauddetection.probabilitystatistics.service.CriteriaStorage;
 
-import static org.ignas.frauddetection.probabilitystatistics.service.BatchProcessor.parseCriteriaGroupUpdates;
+import static org.ignas.frauddetection.probabilitystatistics.service.BatchedCriteriaProcessor.parseCriteriaGroupUpdates;
 
 public class CriteriaGroupUpdater extends AbstractVerticle {
 
-    private CriteriaGroupStorage groupStorage;
+    private CriteriaStorage groupStorage;
 
     public CriteriaGroupUpdater() {
-        this.groupStorage = new CriteriaGroupStorage("mongodb://localhost", "bayes", "criteriaGroupProbabilities");
+        this.groupStorage = new CriteriaStorage("mongodb://localhost", "bayes", "criteriaGroupProbabilities");
     }
 
     @Override
