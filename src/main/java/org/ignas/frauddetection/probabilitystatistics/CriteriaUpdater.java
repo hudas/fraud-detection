@@ -25,7 +25,7 @@ public class CriteriaUpdater extends AbstractVerticle {
             }
 
             BatchToProcess batch = (BatchToProcess) batchEvent.body();
-            storage.persist(BatchProcessor.parseRequiredUpdates(batch));
+            storage.persist(BatchProcessor.parseCriteriaUpdates(batch));
         });
 
         startFuture.complete();

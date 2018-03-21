@@ -3,30 +3,38 @@ package org.ignas.frauddetection.probabilitystatistics.service;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.probabilitystatistics.domain.CriteriaUpdate;
 import org.ignas.frauddetection.probabilitystatistics.domain.CriteriaUpdateIncrement;
+import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class BatchProcessor {
 
-    public static List<CriteriaUpdate> parseRequiredUpdates(BatchToProcess batch) {
+    public static List<CriteriaUpdate> parseCriteriaUpdates(BatchToProcess batch) {
+        return parseBatch(batch, LearningRequest::getCriteriaValues);
+    }
+
+    public static List<CriteriaUpdate> parseCriteriaGroupUpdates(BatchToProcess batch) {
+        return parseBatch(batch, LearningRequest::getCriteriaGroupValues);
+
+    }
+
+    private static List<CriteriaUpdate> parseBatch(
+        BatchToProcess batch,
+        Function<LearningRequest, Map<String, String>> requestValueExtractor) {
+
         Map<String, CriteriaUpdate> updates = new HashMap<>();
 
         batch.getItems()
             .stream()
-            .flatMap(request -> request.getCriteriaValues()
-                .entrySet()
-                .stream()
-                .map(criteria ->
-                    new CriteriaUpdateIncrement(
-                        criteria.getKey(),
-                        criteria.getValue(),
-                        request.isFraudulent(),
-                        request.isAlreadyProcessedTransaction()
-                    )
-                )
+            .flatMap(request -> extractIncrements(
+                requestValueExtractor.apply(request),
+                request.isFraudulent(),
+                request.isAlreadyProcessedTransaction())
             )
             .forEach(increment -> {
                 CriteriaUpdate update = updates.get(increment.pseudoUniqueCode());
@@ -44,6 +52,22 @@ public class BatchProcessor {
             .stream()
             .filter(CriteriaUpdate::causesSideEffects)
             .collect(Collectors.toList());
+    }
 
+    private static Stream<CriteriaUpdateIncrement> extractIncrements(
+        Map<String, String> values,
+        boolean fraudulent,
+        boolean alreadyProcessedTransaction) {
+
+        return values.entrySet()
+            .stream()
+            .map(criteria ->
+                new CriteriaUpdateIncrement(
+                    criteria.getKey(),
+                    criteria.getValue(),
+                    fraudulent,
+                    alreadyProcessedTransaction
+                )
+            );
     }
 }
