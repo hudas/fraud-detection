@@ -42,6 +42,7 @@ public class DetectionLauncher implements VertxLifecycleHooks {
             .add(new CriteriaUpdater())
             .add(new CriteriaGroupUpdater())
             .add(new GeneralDataUpdater())
+            .add(new CriteriaStatisticsUpdater())
             .build();
 
         workers.forEach(it -> vertx.deployVerticle(it, workerDeployment));

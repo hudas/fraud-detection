@@ -17,7 +17,7 @@ public class CriteriaGroupUpdater extends AbstractVerticle {
     }
 
     @Override
-    public void start(Future<Void> startFuture) throws Exception {
+    public void start(Future<Void> startFuture) {
         EventBus bus = vertx.eventBus();
 
         bus.consumer("probability-processing.batch-prepared", batchEvent -> {

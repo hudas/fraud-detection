@@ -1,10 +1,13 @@
 package org.ignas.frauddetection.probabilitystatistics.service;
 
+import com.mongodb.async.client.FindIterable;
 import com.mongodb.async.client.MongoClient;
 import com.mongodb.async.client.MongoClients;
 import com.mongodb.async.client.MongoCollection;
 import com.mongodb.client.model.UpdateOptions;
+import io.vertx.core.Future;
 import org.bson.Document;
+import org.ignas.frauddetection.probabilitystatistics.domain.GeneralOccurences;
 
 public class GeneralProbabilitiesStorage {
 
@@ -32,5 +35,29 @@ public class GeneralProbabilitiesStorage {
                 }
             }
         );
+    }
+
+    public Future<GeneralOccurences> fetch() {
+        Future<GeneralOccurences> loader = Future.future();
+
+        generalProbabilities.find()
+            .first((result, t) -> {
+            if (t != null) {
+                System.out.println(t.getMessage());
+                loader.fail(t);
+            }
+
+            loader.complete(
+                new GeneralOccurences(
+                    result.getDouble("totalTransactions").longValue(),
+                    result.getDouble("fraudulentTransactions").longValue())
+            );
+        });
+
+        return loader;
+    }
+
+    public void close() {
+        client.close();
     }
 }

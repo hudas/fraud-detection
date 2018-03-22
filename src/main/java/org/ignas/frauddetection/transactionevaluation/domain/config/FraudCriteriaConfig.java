@@ -294,7 +294,7 @@ public class FraudCriteriaConfig {
 
     private static List<PeriodicCriteria<DeviationStatistics>> defineAmountRatio() {
         return new PeriodicCriteria.Builder<DeviationStatistics>("AVERAGE_PERIOD_AMOUNT_RATIO", AMOUNT_GROUP)
-            .period(Days.ONE, Days.SEVEN, Days.days(30))
+            .period(Days.SEVEN, Days.days(30))
             .calculator(new DeviationEvaluator())
             .mapper((Days period, Transaction transaction, HistoricalData statistics) -> {
                 float totalAmountForPeriod = transaction.getAmount() + statistics.getDebtor().getExpensesForPeriod(period);

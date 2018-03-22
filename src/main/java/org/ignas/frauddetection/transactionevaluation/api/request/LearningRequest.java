@@ -10,19 +10,19 @@ public class LearningRequest {
 
     private TransactionData transaction;
 
-    private Map<String, String> criteriaValues;
+    private Map<String, Map<String, String>> grouptedCriteriaValues;
 
     private Map<String, String> criteriaGroupValues;
 
     public LearningRequest(
         boolean fraudulent,
         TransactionData transaction,
-        Map<String, String> criteriaValues,
+        Map<String, Map<String, String>> grouptedCriteriaValues,
         Map<String, String> criteriaGroupValues) {
 
         this.fraudulent = fraudulent;
         this.transaction = transaction;
-        this.criteriaValues = criteriaValues;
+        this.grouptedCriteriaValues = grouptedCriteriaValues;
         this.criteriaGroupValues = criteriaGroupValues;
     }
 
@@ -34,8 +34,8 @@ public class LearningRequest {
         return transaction;
     }
 
-    public Map<String, String> getCriteriaValues() {
-        return criteriaValues;
+    public Map<String, Map<String, String>> getGroupedCriteriaValues() {
+        return grouptedCriteriaValues;
     }
 
     public Map<String, String> getCriteriaGroupValues() {

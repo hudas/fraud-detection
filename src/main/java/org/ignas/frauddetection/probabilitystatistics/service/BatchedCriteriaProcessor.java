@@ -15,7 +15,11 @@ import java.util.stream.Stream;
 public class BatchedCriteriaProcessor {
 
     public static List<CriteriaUpdate> parseCriteriaUpdates(BatchToProcess batch) {
-        return parseBatch(batch, LearningRequest::getCriteriaValues);
+        return parseBatch(batch, request -> request.getGroupedCriteriaValues()
+            .values()
+            .stream()
+            .collect(HashMap::new, HashMap::putAll, HashMap::putAll)
+        );
     }
 
     public static List<CriteriaUpdate> parseCriteriaGroupUpdates(BatchToProcess batch) {

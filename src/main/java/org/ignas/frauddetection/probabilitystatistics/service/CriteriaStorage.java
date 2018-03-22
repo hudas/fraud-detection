@@ -7,7 +7,6 @@ import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import org.bson.Document;
-import org.ignas.frauddetection.probabilitystatistics.CriteriaUpdater;
 import org.ignas.frauddetection.probabilitystatistics.domain.CriteriaUpdate;
 
 import java.util.ArrayList;

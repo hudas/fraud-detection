@@ -16,6 +16,7 @@ import org.ignas.frauddetection.transactionevaluation.domain.config.FraudCriteri
 import org.ignas.frauddetection.transactionevaluation.domain.stats.HistoricalData;
 import org.ignas.frauddetection.transactionevaluation.service.GroupRiskEvaluator;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -57,6 +58,7 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
             HistoricalData transactionDataHistory = data.result();
 
             Map<String, String> criteriaValues = criteriaEvaluator.evaluateAll(transactionData, transactionDataHistory);
+
             Future<ProbabilityStatistics> probabilityStatistics = probabilityStatisticsIntegration.load(criteriaValues);
 
             probabilityStatistics.setHandler(
@@ -77,11 +79,25 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
                         .stream()
                         .collect(Collectors.toMap(Map.Entry::getKey, value -> value.getValue().name()));
 
+                    Map<String, Map<String, String>> groupedCriteriaValues = new HashMap<>();
+
+                    for (Map.Entry<String, String> entries : criteriaValues.entrySet()) {
+                        String group = criteriaEvaluator.resolveGroup(entries.getKey());
+
+                        Map<String, String> values = groupedCriteriaValues.get(group);
+                        if (values == null) {
+                            values = new HashMap<>();
+                            groupedCriteriaValues.put(group, values);
+                        }
+
+                        values.put(entries.getKey(), entries.getValue());
+                    }
+
                     learningInitiator.publish(
                         new LearningRequest(
                         false,
                             dataDTO,
-                            criteriaValues,
+                            groupedCriteriaValues,
                             groupValueRepresentations
                         )
                     );
