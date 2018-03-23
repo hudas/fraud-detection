@@ -26,8 +26,8 @@ public class GeneralProbabilitiesStorage {
     public void persist(int numberOfNewTransactions, int numberOfNewFraudulentTransaction) {
         generalProbabilities.updateOne(
             new Document(),
-            new Document("$inc", new Document("totalTransactions", numberOfNewTransactions)
-                .append("fraudulentTransactions", numberOfNewFraudulentTransaction)),
+            new Document("$inc", new Document("totalTransactions", (long) numberOfNewTransactions)
+                .append("fraudulentTransactions", (long) numberOfNewFraudulentTransaction)),
             new UpdateOptions().upsert(true),
             (result, t) -> {
                 if (t != null) {
@@ -49,8 +49,8 @@ public class GeneralProbabilitiesStorage {
 
             loader.complete(
                 new GeneralOccurences(
-                    result.getDouble("totalTransactions").longValue(),
-                    result.getDouble("fraudulentTransactions").longValue())
+                    result.getLong("totalTransactions"),
+                    result.getLong("fraudulentTransactions"))
             );
         });
 

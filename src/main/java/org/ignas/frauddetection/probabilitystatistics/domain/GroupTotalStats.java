@@ -45,6 +45,11 @@ public class GroupTotalStats {
         List<CombinationStatistics> increments,
         List<CombinationStatistics> beforeUpdateValues) {
 
+        if (totalFraudTransactions == 0) {
+            System.out.println("There is no fraud occurences yet, will not update fraud stats!");
+            return;
+        }
+
 //        Map is not really needed for functional purposes, however search by code in hashmap will be faster than iterating over the list.
         Map<String, CombinationUpdate> updates = new HashMap<>();
 
@@ -58,7 +63,7 @@ public class GroupTotalStats {
         for (CombinationStatistics increment : increments) {
             CombinationUpdate update = updates.get(increment.getCode());
 
-            update.setDeltas(increment.getOccurences(), increment.getFraudOccurences());
+            update.addIncrements(increment.getOccurences(), increment.getFraudOccurences());
         }
 
         long squareDifference = 0;
@@ -73,10 +78,10 @@ public class GroupTotalStats {
         }
 
         sumOfOccurencesInFraud += additionalOccurrences;
-        averageProbability = sumOfOccurencesInFraud /(totalFraudTransactions * numberOfPossibleCombinations);
+        averageProbability = ((float) sumOfOccurencesInFraud) /(totalFraudTransactions * numberOfPossibleCombinations);
 
-        float firstComposite = averageProbability * numberOfPossibleCombinations;
-        float secondComposite = (sumOfSquaredFraudOccurences + squareDifference) / (totalFraudTransactions * totalFraudTransactions);
+        float firstComposite = averageProbability * averageProbability * numberOfPossibleCombinations;
+        float secondComposite = ((float) (sumOfSquaredFraudOccurences + squareDifference)) / (totalFraudTransactions * totalFraudTransactions);
         float thirdComposite = 2 * averageProbability * sumOfOccurencesInFraud / totalFraudTransactions;
 
         deviationProbability = (float) Math.sqrt((firstComposite + secondComposite + thirdComposite) / (numberOfPossibleCombinations - 1));

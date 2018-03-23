@@ -16,10 +16,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
+import static com.google.common.collect.Iterables.getFirst;
+import static com.mongodb.client.model.Filters.*;
 
 public class GroupStatisticsStorage {
+
+    private static final String DEVIATION_PROBABILITY_FIELD = "deviationProbability";
+    private static final String OCCURRENCES_SUM_FIELD = "sumOfOccurrencesInFraud";
+    private static final String SQUARED_OCCURRENCES_SUM_FIELD = "sumOfSquaredOccurrencesInFraud";
+    private static final String AVERAGE_PROBABILITY_FIELD = "averageProbability";
+    private static final String NAME_FIELD = "name";
+    private static final String TOTALS_DOC = "totals";
+    private static final String COMBINATIONS_DOC = "combinations";
+    private static final String CODE_FIELD = "code";
+    private static final String OCCURENCES_FIELD = "occurences";
+    private static final String FRAUD_OCCURENCES_FIELD = "fraudOccurences";
 
     private MongoClient client;
 
@@ -49,12 +60,16 @@ public class GroupStatisticsStorage {
     public Future<Void> initCombinationsIfNotPresent(List<CombinationStatistics> combinations) {
         List<UpdateOneModel<Document>> updates = combinations
             .stream()
+            .distinct()
             .map(combination ->
                 new UpdateOneModel<Document>(
-                    and(eq("name", combination.getGroup()), eq("combinations.code", combination.getGroup())),
-                    new Document("$addToSet", new Document("combinations", new Document("code", combination.getCode())
-                        .append("occurences", 0)
-                        .append("fraudOccurences", 0)
+                    and(
+                        eq(NAME_FIELD, combination.getGroup()),
+                        not(elemMatch(COMBINATIONS_DOC, new Document(CODE_FIELD, combination.getCode())))
+                    ),
+                    new Document("$addToSet", new Document(COMBINATIONS_DOC, new Document(CODE_FIELD, combination.getCode())
+                        .append(OCCURENCES_FIELD, 0l)
+                        .append(FRAUD_OCCURENCES_FIELD, 0l)
                     ))
                 )
             )
@@ -77,19 +92,21 @@ public class GroupStatisticsStorage {
     public Future<CombinationStatistics> fetch(CombinationStatistics combination) {
         Future<CombinationStatistics> loader = Future.future();
 
-        groupStatistics.find(and(eq("name", combination.getGroup()), eq("combinations.code", combination.getCode())))
-            .projection(Projections.include("name", "combinations.$"))
+        groupStatistics.find(and(eq(NAME_FIELD, combination.getGroup()), eq(COMBINATIONS_DOC + "." + CODE_FIELD, combination.getCode())))
+            .projection(Projections.include(NAME_FIELD, COMBINATIONS_DOC + ".$"))
             .first((result, t) -> {
                 if (t != null) {
                     loader.fail(t);
                 }
 
+                Document loadedCombination = getFirst((List <Document>) result.get(COMBINATIONS_DOC), null);
+
                 loader.complete(
                     new CombinationStatistics(
                         combination.getGroup(),
                         combination.getCode(),
-                        result.getLong("combinations.occurences"),
-                        result.getLong("combinations.fraudOccurences")
+                        loadedCombination.getLong(OCCURENCES_FIELD),
+                        loadedCombination.getLong(FRAUD_OCCURENCES_FIELD)
                     )
                 );
             });
@@ -103,18 +120,30 @@ public class GroupStatisticsStorage {
         Map<String, GroupTotalStats> resultMap = new HashMap<>();
 
         groupStatistics.find()
-            .projection(Projections.include("name", "totals"))
+            .projection(Projections.include(NAME_FIELD, TOTALS_DOC))
             .forEach(
-                document -> resultMap.put(
-                    document.getString("name"),
-                    new GroupTotalStats(
-                        document.getLong("averageProbability"),
-                        document.getLong("deviationProbability"),
-                        document.getLong("sumOfOccurancesInFraud"),
-                        document.getLong("sumOfSquaredOccurrencesInFraud")
-                    )
-                ),
-                (result, t) -> loader.complete(resultMap)
+                document -> {
+                    String name = document.getString(NAME_FIELD);
+                    Document totals = (Document) document.get(TOTALS_DOC);
+
+                    resultMap.put(
+                        name,
+                        new GroupTotalStats(
+                            totals.getLong(AVERAGE_PROBABILITY_FIELD),
+                            totals.getLong(DEVIATION_PROBABILITY_FIELD),
+                            totals.getLong(OCCURRENCES_SUM_FIELD),
+                            totals.getLong(SQUARED_OCCURRENCES_SUM_FIELD)
+                        )
+                    );
+                },
+                (result, t) -> {
+                    if (t != null) {
+                        System.out.println(t.getMessage());
+                        loader.fail(t);
+                    }
+
+                    loader.complete(resultMap);
+                }
             );
 
         return loader;
@@ -152,9 +181,12 @@ public class GroupStatisticsStorage {
         List<UpdateOneModel<Document>> increments = combinations.stream()
             .map(it ->
                 new UpdateOneModel<Document>(
-                    and(eq("name", it.getGroup()), eq("combinations.code", it.getCode())),
-                    new Document("$inc", new Document("combinations.$.occurences", it.getOccurences())
-                        .append("combinations.$.fraudOccurences", it.getFraudOccurences()))
+                    and(eq(NAME_FIELD, it.getGroup()), eq(COMBINATIONS_DOC + "." + CODE_FIELD, it.getCode())),
+                    new Document(
+                        "$inc",
+                        new Document(COMBINATIONS_DOC + ".$." + OCCURENCES_FIELD, it.getOccurences())
+                            .append(COMBINATIONS_DOC + ".$." + FRAUD_OCCURENCES_FIELD, it.getFraudOccurences())
+                    )
                 )
             )
             .collect(Collectors.toList());
@@ -172,11 +204,12 @@ public class GroupStatisticsStorage {
         for (Map.Entry<String, GroupTotalStats> total : totals.entrySet()) {
             updates.add(
                 new UpdateOneModel<Document>(
-                    Filters.eq("name", total.getKey()),
-                    new Document("$inc", new Document("averageProbability", total.getValue().getAverageProbability())
-                        .append("deviationProbability", total.getValue().getDeviationProbability())
-                        .append("sumOfOccurrencesInFraud", total.getValue().getSumOfOccurencesInFraud())
-                        .append("sumOfSquaredOccurrencesInFraud", total.getValue().getSumOfSquaredFraudOccurences())
+                    Filters.eq(NAME_FIELD, total.getKey()),
+                    new Document("$inc",
+                        new Document(TOTALS_DOC + "." + AVERAGE_PROBABILITY_FIELD, total.getValue().getAverageProbability())
+                            .append(TOTALS_DOC + "." + DEVIATION_PROBABILITY_FIELD, total.getValue().getDeviationProbability())
+                            .append(TOTALS_DOC + "." + OCCURRENCES_SUM_FIELD, total.getValue().getSumOfOccurencesInFraud())
+                            .append(TOTALS_DOC + "." + SQUARED_OCCURRENCES_SUM_FIELD, total.getValue().getSumOfSquaredFraudOccurences())
                     )
                 )
             );
@@ -191,14 +224,14 @@ public class GroupStatisticsStorage {
 
     private UpdateOneModel<Document> buildInitQueryForGroup(String groupName) {
         return new UpdateOneModel<Document>(
-            new Document("name", groupName),
-            new Document("$setOnInsert", new Document("name", groupName)
-                .append("combinations", new ArrayList<>())
-                .append("totals",
-                    new Document("averageProbability", 0)
-                        .append("deviationProbability", 0)
-                        .append("sumOfOccurrencesInFraud", 0)
-                        .append("sumOfSquaredOccurrencesInFraud", 0)
+            new Document(NAME_FIELD, groupName),
+            new Document("$setOnInsert", new Document(NAME_FIELD, groupName)
+                .append(COMBINATIONS_DOC, new ArrayList<>())
+                .append(TOTALS_DOC,
+                    new Document(AVERAGE_PROBABILITY_FIELD, 0l)
+                        .append(DEVIATION_PROBABILITY_FIELD, 0l)
+                        .append(OCCURRENCES_SUM_FIELD, 0l)
+                        .append(SQUARED_OCCURRENCES_SUM_FIELD, 0l)
                 )
             ),
             new UpdateOptions().upsert(true)

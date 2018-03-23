@@ -53,7 +53,7 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
 
             EventBus bus = vertx.eventBus();
 
-            bus.consumer("probability-processing.batch-prepared", (batchEvent) -> {
+            bus.consumer("probability-processing.criteria-data-updated", (batchEvent) -> {
                 if (!(batchEvent.body() instanceof BatchToProcess)) {
                     throw new IllegalArgumentException("Invalid message type: " + batchEvent.body().getClass());
                 }
@@ -85,8 +85,12 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
                     List<CombinationStatistics> beforeUpdateStatistics = new ArrayList<>();
                     Future statisticsLoaded = Future.future();
 
-                    groupCombinations.stream()
+                    List<CombinationStatistics> uniqueCombinations = groupCombinations
+                        .stream()
                         .distinct()
+                        .collect(Collectors.toList());
+
+                    uniqueCombinations.stream()
                         .map(storage::fetch)
                         .forEach(future ->
                             future.setHandler(statsLoaded -> {
@@ -96,7 +100,7 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
 
                                 beforeUpdateStatistics.add(statsLoaded.result());
 
-                                if (beforeUpdateStatistics.size() == groupCombinations.size()) {
+                                if (beforeUpdateStatistics.size() == uniqueCombinations.size()) {
                                     statisticsLoaded.complete();
                                 }
                             }));
@@ -114,6 +118,10 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
                             Future<Map<String, GroupTotalStats>> totalStatsLoader = storage.loadTotals();
 
                             totalStatsLoader.setHandler(groupStatsLoaded -> {
+                                if (groupStatsLoaded.failed()) {
+                                    throw new IllegalStateException(groupStatsLoaded.cause().getMessage());
+                                }
+
                                 Map<String, GroupTotalStats> groupStats = groupStatsLoaded.result();
 
                                 Map<String, List<CombinationStatistics>> increments = groupCombinations.stream()
@@ -141,12 +149,11 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
 
                                 storage.updateTotals(groupStats);
                             });
-
-
                         });
                     });
                 });
             });
+
             startFuture.complete();
         });
     }

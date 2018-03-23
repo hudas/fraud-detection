@@ -19,13 +19,15 @@ public class CriteriaUpdater extends AbstractVerticle {
 
         EventBus bus = vertx.eventBus();
 
-        bus.consumer("probability-processing.batch-prepared", (batchEvent) -> {
+        bus.consumer("probability-processing.group-data-updated", (batchEvent) -> {
             if (!(batchEvent.body() instanceof BatchToProcess)) {
                 throw new IllegalArgumentException("Invalid message type: " + batchEvent.body().getClass());
             }
 
             BatchToProcess batch = (BatchToProcess) batchEvent.body();
             storage.persist(BatchedCriteriaProcessor.parseCriteriaUpdates(batch));
+
+            bus.publish("probability-processing.criteria-data-updated" ,batch);
         });
 
         startFuture.complete();

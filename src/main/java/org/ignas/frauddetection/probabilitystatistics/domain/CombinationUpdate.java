@@ -26,9 +26,9 @@ public class CombinationUpdate {
         this.fraudOccurrencesBeforeUpdate = fraudOccurrencesBeforeUpdate;
     }
 
-    public void setDeltas(long occurrencesDelta, long fraudOccurrencesDelta) {
-        this.occurrencesDelta = occurrencesDelta;
-        this.fraudOccurrencesDelta = fraudOccurrencesDelta;
+    public void addIncrements(long occurrencesDelta, long fraudOccurrencesDelta) {
+        this.occurrencesDelta += occurrencesDelta;
+        this.fraudOccurrencesDelta += fraudOccurrencesDelta;
     }
 
     public long getFraudOccurrencesBeforeUpdate() {

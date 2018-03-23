@@ -41,6 +41,9 @@ public class GeneralDataUpdater extends AbstractVerticle {
                 .count();
 
             probabilitiesStorage.persist(newTransactions, newFraudulentTransactions);
+
+            // Resend same event without any modifications
+            bus.publish("probability-processing.general-data-updated", batch);
         });
     }
 }
