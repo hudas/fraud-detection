@@ -78,8 +78,11 @@ public class ProbabilityStatisticsArchive extends AbstractVerticle {
                         Map<String, GroupTotalStats> group = loaded.result().resultAt(2);
 
                         float fraudProbability = general.getFraudProbability();
+
                         Map<String, Float> criteriaProbabilities =
                             collectCriteriaProbabilities(criteria, general.getTotalFraudTransactions());
+
+                        fillWithDefaults(criteriaProbabilities, request.getCriteriaValues());
 
                         Map<String, CriteriaGroupRisk> groupRisks = group.entrySet()
                             .stream()
@@ -142,11 +145,37 @@ public class ProbabilityStatisticsArchive extends AbstractVerticle {
                             criteriaValues.put(criterion.getValue(), occurrenceInFraudProbability);
                         });
 
+                        fillEmptyWithDefaults(tableValues, probabilityRequest.getGroups());
+
                         message.reply(new BayesTable(tableValues));
                     });
             });
 
         startup.complete();
+    }
+
+    private void fillWithDefaults(Map<String, Float> criteriaProbabilities, Map<String, String> requestedValues) {
+        requestedValues.keySet().forEach((key) -> {
+            Float result = criteriaProbabilities.get(key);
+
+            if (result == null) {
+                criteriaProbabilities.put(key, 0f);
+            }
+        });
+    }
+
+    private void fillEmptyWithDefaults(Map<String, Map<String, Float>> tableValues, List<String> requestedGroups) {
+        requestedGroups.forEach(group ->
+            VALUE_CODES.forEach(value -> {
+                Map<String, Float> loadedCriteriaValues = tableValues.get(group);
+
+                Float loadedValue = loadedCriteriaValues.get(value);
+
+                if (loadedValue == null) {
+                    loadedCriteriaValues.put(value, 0f);
+                }
+            })
+        );
     }
 
     private Map<String, Float> collectCriteriaProbabilities(
