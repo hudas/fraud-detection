@@ -1,4 +1,4 @@
-package org.ignas.frauddetection.probabilitystatistics.service;
+package org.ignas.frauddetection.probabilitystatistics.service.repositories;
 
 import com.google.common.collect.ImmutableList;
 import com.mongodb.async.client.MongoClient;
@@ -33,7 +33,6 @@ public class GroupStatisticsStorage {
     private static final String FRAUD_OCCURENCES_FIELD = "fraudOccurences";
 
     private MongoClient client;
-
     private MongoCollection<Document> groupStatistics;
 
     public GroupStatisticsStorage(String url, String database, String collection) {
@@ -41,9 +40,67 @@ public class GroupStatisticsStorage {
 
         groupStatistics = client.getDatabase(database)
             .getCollection(collection);
-
     }
 
+    public Future<CombinationStatistics> fetchCombination(CombinationStatistics combination) {
+        Future<CombinationStatistics> loader = Future.future();
+
+        groupStatistics.find(and(eq(NAME_FIELD, combination.getGroup()), eq(COMBINATIONS_DOC + "." + CODE_FIELD, combination.getCode())))
+            .projection(Projections.include(NAME_FIELD, COMBINATIONS_DOC + ".$"))
+            .first((result, t) -> {
+                if (t != null) {
+                    loader.fail(t);
+                }
+
+                Document loadedCombination = getFirst((List <Document>) result.get(COMBINATIONS_DOC), null);
+
+                loader.complete(
+                    new CombinationStatistics(
+                        combination.getGroup(),
+                        combination.getCode(),
+                        loadedCombination.getLong(OCCURENCES_FIELD),
+                        loadedCombination.getLong(FRAUD_OCCURENCES_FIELD)
+                    )
+                );
+            });
+
+        return loader;
+    }
+
+    public Future<Map<String, GroupTotalStats>> fetchTotalStats() {
+        Future loader = Future.future();
+
+        Map<String, GroupTotalStats> resultMap = new HashMap<>();
+
+        groupStatistics.find()
+            .projection(Projections.include(NAME_FIELD, TOTALS_DOC))
+            .forEach(
+                document -> {
+                    String name = document.getString(NAME_FIELD);
+                    Document totals = (Document) document.get(TOTALS_DOC);
+
+                    resultMap.put(
+                        name,
+                        new GroupTotalStats(
+                            totals.getLong(AVERAGE_PROBABILITY_FIELD),
+                            totals.getLong(DEVIATION_PROBABILITY_FIELD),
+                            totals.getLong(OCCURRENCES_SUM_FIELD),
+                            totals.getLong(SQUARED_OCCURRENCES_SUM_FIELD)
+                        )
+                    );
+                },
+                (result, t) -> {
+                    if (t != null) {
+                        System.out.println(t.getMessage());
+                        loader.fail(t);
+                    }
+
+                    loader.complete(resultMap);
+                }
+            );
+
+        return loader;
+    }
 
     /**
      * update(
@@ -88,95 +145,6 @@ public class GroupStatisticsStorage {
         return loader;
     }
 
-
-    public Future<CombinationStatistics> fetch(CombinationStatistics combination) {
-        Future<CombinationStatistics> loader = Future.future();
-
-        groupStatistics.find(and(eq(NAME_FIELD, combination.getGroup()), eq(COMBINATIONS_DOC + "." + CODE_FIELD, combination.getCode())))
-            .projection(Projections.include(NAME_FIELD, COMBINATIONS_DOC + ".$"))
-            .first((result, t) -> {
-                if (t != null) {
-                    loader.fail(t);
-                }
-
-                Document loadedCombination = getFirst((List <Document>) result.get(COMBINATIONS_DOC), null);
-
-                loader.complete(
-                    new CombinationStatistics(
-                        combination.getGroup(),
-                        combination.getCode(),
-                        loadedCombination.getLong(OCCURENCES_FIELD),
-                        loadedCombination.getLong(FRAUD_OCCURENCES_FIELD)
-                    )
-                );
-            });
-
-        return loader;
-    }
-
-    public Future<Map<String, GroupTotalStats>> loadTotals() {
-        Future loader = Future.future();
-
-        Map<String, GroupTotalStats> resultMap = new HashMap<>();
-
-        groupStatistics.find()
-            .projection(Projections.include(NAME_FIELD, TOTALS_DOC))
-            .forEach(
-                document -> {
-                    String name = document.getString(NAME_FIELD);
-                    Document totals = (Document) document.get(TOTALS_DOC);
-
-                    resultMap.put(
-                        name,
-                        new GroupTotalStats(
-                            totals.getLong(AVERAGE_PROBABILITY_FIELD),
-                            totals.getLong(DEVIATION_PROBABILITY_FIELD),
-                            totals.getLong(OCCURRENCES_SUM_FIELD),
-                            totals.getLong(SQUARED_OCCURRENCES_SUM_FIELD)
-                        )
-                    );
-                },
-                (result, t) -> {
-                    if (t != null) {
-                        System.out.println(t.getMessage());
-                        loader.fail(t);
-                    }
-
-                    loader.complete(resultMap);
-                }
-            );
-
-        return loader;
-    }
-
-    public void close() {
-        client.close();
-    }
-
-
-    public Future<Void> initGroupsIfNotPresent() {
-        List<UpdateOneModel<Document>> initDocuments = ImmutableList.of(
-            buildInitQueryForGroup("AMOUNT"),
-            buildInitQueryForGroup("COUNT"),
-            buildInitQueryForGroup("TIME"),
-            buildInitQueryForGroup("LOCATION")
-        );
-
-
-        Future<Void> loader = Future.future();
-        groupStatistics.bulkWrite(initDocuments, new BulkWriteOptions().ordered(false), (result, t) -> {
-            if (t != null) {
-                System.out.println(t.getMessage());
-                loader.fail(t);
-            }
-
-            loader.complete();
-        });
-
-        return loader;
-    }
-
-
     public void updateOccurences(List<CombinationStatistics> combinations) {
         List<UpdateOneModel<Document>> increments = combinations.stream()
             .map(it ->
@@ -196,6 +164,28 @@ public class GroupStatisticsStorage {
                 System.out.println(t.getMessage());
             }
         });
+    }
+
+    public Future<Void> initTotalsIfNotPresent() {
+        List<UpdateOneModel<Document>> initDocuments = ImmutableList.of(
+            buildInitQueryForGroup("AMOUNT"),
+            buildInitQueryForGroup("COUNT"),
+            buildInitQueryForGroup("TIME"),
+            buildInitQueryForGroup("LOCATION")
+        );
+
+
+        Future<Void> loader = Future.future();
+        groupStatistics.bulkWrite(initDocuments, new BulkWriteOptions().ordered(false), (result, t) -> {
+            if (t != null) {
+                System.out.println(t.getMessage());
+                loader.fail(t);
+            }
+
+            loader.complete();
+        });
+
+        return loader;
     }
 
     public void updateTotals(Map<String, GroupTotalStats> totals) {
@@ -220,6 +210,10 @@ public class GroupStatisticsStorage {
                 System.out.println(t.getMessage());
             }
         }));
+    }
+
+    public void close() {
+        client.close();
     }
 
     private UpdateOneModel<Document> buildInitQueryForGroup(String groupName) {

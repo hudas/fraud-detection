@@ -4,7 +4,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
-import org.ignas.frauddetection.probabilitystatistics.service.CriteriaStorage;
+import org.ignas.frauddetection.probabilitystatistics.service.repositories.CriteriaStorage;
 
 import static org.ignas.frauddetection.probabilitystatistics.service.BatchedCriteriaProcessor.parseCriteriaGroupUpdates;
 

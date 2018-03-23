@@ -20,10 +20,10 @@ public class GroupRiskEvaluator {
         this.criteriaEvaluator = criteriaEvaluator;
     }
 
-    public Map<String, Risk.Value> evaluate(ProbabilityStatistics criteriaProbabilities) {
-        Float fraudProbability = criteriaProbabilities.getFraudProbability();
+    public Map<String, Risk.Value> evaluate(ProbabilityStatistics stats) {
+        Float fraudProbability = stats.getFraudProbability();
 
-        Map<String, List<Float>> criteriaGroupProbabilities = criteriaProbabilities.getCriteriaProbabilites()
+        Map<String, List<Float>> criteriaGroupProbabilities = stats.getCriteriaProbabilites()
             .entrySet()
             .stream()
             .collect(
@@ -37,7 +37,7 @@ public class GroupRiskEvaluator {
             .map(entry -> mapToRisk(
                 entry.getKey(),
                 entry.getValue(),
-                criteriaProbabilities.getGroupStatistics()))
+                stats.getGroupStatistics()))
             .collect(toMap(Risk::getGroupName, (group) -> group.evaluate(fraudProbability)));
     }
 

@@ -3,7 +3,8 @@ package org.ignas.frauddetection.probabilitystatistics.api.response;
 import java.util.Map;
 
 public class BayesTable {
-    Map<String, Map<String, Float>> table;
+
+    private Map<String, Map<String, Float>> table;
 
     public BayesTable(Map<String, Map<String, Float>> table) {
         this.table = table;

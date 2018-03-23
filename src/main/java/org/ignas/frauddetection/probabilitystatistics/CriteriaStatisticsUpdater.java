@@ -7,9 +7,11 @@ import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.probabilitystatistics.domain.CombinationStatistics;
-import org.ignas.frauddetection.probabilitystatistics.domain.GeneralOccurences;
+import org.ignas.frauddetection.probabilitystatistics.domain.GeneralOccurrences;
 import org.ignas.frauddetection.probabilitystatistics.domain.GroupTotalStats;
 import org.ignas.frauddetection.probabilitystatistics.service.*;
+import org.ignas.frauddetection.probabilitystatistics.service.repositories.GeneralProbabilitiesStorage;
+import org.ignas.frauddetection.probabilitystatistics.service.repositories.GroupStatisticsStorage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +45,7 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
         generalProbabilities = new GeneralProbabilitiesStorage(
             "mongodb://localhost", "bayes", "generalProbabilities");
 
-        Future<Void> initResult = storage.initGroupsIfNotPresent();
+        Future<Void> initResult = storage.initTotalsIfNotPresent();
 
         initResult.setHandler(result -> {
             if (result.failed()) {
@@ -58,7 +60,7 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
                     throw new IllegalArgumentException("Invalid message type: " + batchEvent.body().getClass());
                 }
 
-                Future<GeneralOccurences> statsLoader = generalProbabilities.fetch();
+                Future<GeneralOccurrences> statsLoader = generalProbabilities.fetch();
 
                 BatchToProcess batch = (BatchToProcess) batchEvent.body();
 
@@ -91,7 +93,7 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
                         .collect(Collectors.toList());
 
                     uniqueCombinations.stream()
-                        .map(storage::fetch)
+                        .map(storage::fetchCombination)
                         .forEach(future ->
                             future.setHandler(statsLoaded -> {
                                 if (result.failed()) {
@@ -113,9 +115,9 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
                                 throw new IllegalStateException("Failed to load stats");
                             }
 
-                            GeneralOccurences occurences = totalStatsLoaded.result();
+                            GeneralOccurrences occurences = totalStatsLoaded.result();
 
-                            Future<Map<String, GroupTotalStats>> totalStatsLoader = storage.loadTotals();
+                            Future<Map<String, GroupTotalStats>> totalStatsLoader = storage.fetchTotalStats();
 
                             totalStatsLoader.setHandler(groupStatsLoaded -> {
                                 if (groupStatsLoaded.failed()) {

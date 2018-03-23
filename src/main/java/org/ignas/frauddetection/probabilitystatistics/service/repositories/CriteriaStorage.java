@@ -1,19 +1,31 @@
-package org.ignas.frauddetection.probabilitystatistics.service;
+package org.ignas.frauddetection.probabilitystatistics.service.repositories;
 
+import com.google.common.collect.Iterables;
 import com.mongodb.async.client.MongoClient;
 import com.mongodb.async.client.MongoClients;
 import com.mongodb.async.client.MongoCollection;
-import com.mongodb.client.model.BulkWriteOptions;
-import com.mongodb.client.model.UpdateOneModel;
-import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.model.*;
+import io.vertx.core.Future;
 import org.bson.Document;
+import org.bson.conversions.Bson;
+import org.ignas.frauddetection.probabilitystatistics.api.response.BayesTable;
+import org.ignas.frauddetection.probabilitystatistics.domain.CriteriaStatistics;
 import org.ignas.frauddetection.probabilitystatistics.domain.CriteriaUpdate;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.mongodb.client.model.Filters.all;
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
+
 public class CriteriaStorage {
+
+    private static final String OCCURRENCES_FIELD = "totalOccurrences";
+    private static final String OCCURRENCES_IN_FRAUD_FIELD = "occurrencesInFraud";
 
     private MongoClient client;
 
@@ -25,6 +37,92 @@ public class CriteriaStorage {
         criteriaProbabilities = client.getDatabase(database)
             .getCollection(collection);
 
+    }
+
+    public Future<List<CriteriaStatistics>> fetchValues(List<String> names) {
+//      Collect filters and join using OR condition, this way preventing multiple roundtrips to DB.
+        List<Bson> nameFilters = names.stream()
+            .map(name -> Filters.eq("name", name))
+            .collect(Collectors.toList());
+
+        Future<List<CriteriaStatistics>> loader = Future.future();
+
+        List<CriteriaStatistics> statisticsResult = new ArrayList<>();
+
+        criteriaProbabilities.find(Filters.or(nameFilters))
+            .forEach(
+                doc -> statisticsResult.addAll(extractValues(doc)),
+                (result, t) -> {
+                    if (t != null) {
+                        loader.fail(t);
+                    }
+
+                    loader.complete(statisticsResult);
+                });
+
+        return loader;
+    }
+
+    public Future<List<CriteriaStatistics>> fetchStatistics(Map<String, String> criteriaValues) {
+        Future<List<CriteriaStatistics>> totalLoader = Future.future();
+
+        List<CriteriaStatistics> loadedStatistics = new ArrayList<>();
+
+        int criteriaToLoad = criteriaValues.size();
+
+        criteriaValues.entrySet()
+            .stream()
+            .map(criterion -> fetchStatistics(criterion.getKey(), criterion.getValue()))
+            .forEach(loader -> loader.setHandler(criteriaResult -> {
+                if (loader.failed()) {
+                    totalLoader.fail(loader.cause());
+                    return;
+                }
+
+                loadedStatistics.add(criteriaResult.result());
+
+                if (loadedStatistics.size() == criteriaToLoad) {
+                    totalLoader.complete(loadedStatistics);
+                }
+            }));
+
+        return totalLoader;
+    }
+
+    /**
+     * Overloaded method for single criteria fetching.
+     * @param name
+     * @param value
+     * @return
+     */
+    public Future<CriteriaStatistics> fetchStatistics(String name, String value) {
+        Future<CriteriaStatistics> loader = Future.future();
+        criteriaProbabilities.find(
+            and(eq("name", name), eq("values.name", name)))
+            .projection(Projections.include("name", "values.$"))
+            .first((result, t) -> {
+                if (t != null) {
+                    loader.fail(t);
+                }
+
+                Document values = Iterables.getFirst((List< Document >) result.get("values"), null);
+                if (values == null) {
+                    throw new IllegalStateException(
+                        "Values missing for criteria: " + name + " Value: " + name
+                    );
+                }
+
+                loader.complete(
+                    new CriteriaStatistics(
+                        name,
+                        value,
+                        values.getLong(OCCURRENCES_FIELD),
+                        values.getLong(OCCURRENCES_IN_FRAUD_FIELD)
+                    )
+                );
+            });
+
+        return loader;
     }
 
     /**
@@ -45,7 +143,7 @@ public class CriteriaStorage {
      *  Therefore with current mongo implementation it is impossible to create missing documents
      *    and increment existing documents with signle query.
      *
-     *    Another possibility would be fetch all existing documents from mongo,
+     *    Another possibility would be fetchCombination all existing documents from mongo,
      *    identify documents which are missing, and create only those who are missing.
      *    This would require additional application logic, would be less effective.
      *     Fetching all documents in order to find missing ones is required.
@@ -54,7 +152,6 @@ public class CriteriaStorage {
      *
      *
      */
-
     public void persist(List<CriteriaUpdate> changes) {
         List<UpdateOneModel<Document>> emptyDocumentPopulation = changes.stream()
             .map(CriteriaStorage::mapToDocumentCreation)
@@ -165,13 +262,29 @@ public class CriteriaStorage {
         Document updateOperation = new Document();
 
         if (update.getNewOccurences() != 0) {
-            updateOperation.append("values.$.totalOccurences", update.getNewOccurences());
+            updateOperation.append("values.$." + OCCURRENCES_FIELD, (long) update.getNewOccurences());
         }
 
         if (update.getNewFraudOccurences() != 0) {
-            updateOperation.append("values.$.occurencesInFraud", update.getNewFraudOccurences());
+            updateOperation.append("values.$." + OCCURRENCES_IN_FRAUD_FIELD, (long) update.getNewFraudOccurences());
         }
         return updateOperation;
     }
 
+
+    private List<CriteriaStatistics> extractValues(Document doc) {
+        List<CriteriaStatistics> documentValues = new ArrayList<>();
+
+        String criteriaName = doc.getString("name");
+
+        List<Document> values = (List<Document>) doc.get("values");
+        values.forEach(value -> {
+            String valueName = value.getString("name");
+            Long occurences = value.getLong(OCCURRENCES_FIELD);
+            Long occurencesInFraud = value.getLong(OCCURRENCES_IN_FRAUD_FIELD);
+
+            documentValues.add(new CriteriaStatistics(criteriaName, valueName, occurences, occurencesInFraud));
+        });
+        return documentValues;
+    }
 }
