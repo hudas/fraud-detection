@@ -9,7 +9,7 @@ public class TransactionData {
 
     private String transactionId;
 
-    private BigDecimal amount;
+    private Float amount;
 
     private String debtorId;
 
@@ -24,7 +24,7 @@ public class TransactionData {
 
     public TransactionData(
             String transactionId,
-            BigDecimal amount,
+            Float amount,
             String debtorId,
             String creditorId,
             Location location,
@@ -42,7 +42,7 @@ public class TransactionData {
         return transactionId;
     }
 
-    public BigDecimal getAmount() {
+    public Float getAmount() {
         return amount;
     }
 

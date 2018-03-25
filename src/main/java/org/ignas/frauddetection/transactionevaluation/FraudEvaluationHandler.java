@@ -96,7 +96,7 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
     private Transaction mapToDomain(TransactionData request) {
         return new Transaction(
             request.getTransactionId(),
-            request.getAmount().floatValue(),
+            request.getAmount(),
             request.getDebtorId(),
             request.getCreditorId(),
             request.getLocation(),

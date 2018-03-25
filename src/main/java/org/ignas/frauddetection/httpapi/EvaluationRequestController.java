@@ -56,6 +56,15 @@ public class EvaluationRequestController extends AbstractVerticle {
             )
             .failureHandler(new EvaluationRequestFailureHandler());
 
+        router.route(HttpMethod.POST, "/mark-fraudulent/:transactionId")
+            .handler(BodyHandler.create())
+            .handler(HTTPRequestValidationHandler.create().addJsonBodySchema(requestSchema))
+            .handler(TimeoutHandler.create(DEFAULT_TIMEOUT, 500))
+            .handler(
+                new FraudulentTransactionHandler(request -> bus.publish("evaluation-archive.marked-fraudulent", request))
+            )
+            .failureHandler(new EvaluationRequestFailureHandler());
+
         return router;
     }
 

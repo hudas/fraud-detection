@@ -9,6 +9,7 @@ import io.vertx.core.impl.launcher.VertxLifecycleHooks;
 import io.vertx.core.json.JsonObject;
 import org.ignas.frauddetection.httpapi.EvaluationRequestController;
 import org.ignas.frauddetection.probabilitystatistics.*;
+import org.ignas.frauddetection.processinglog.EvaluationArchive;
 import org.ignas.frauddetection.resultsanalyser.ResultsAnalyser;
 import org.ignas.frauddetection.transactionevaluation.EvaluationController;
 import org.ignas.frauddetection.transactionstatistics.TransactionStatisticArchive;
@@ -43,6 +44,7 @@ public class DetectionLauncher implements VertxLifecycleHooks {
             .add(new CriteriaGroupUpdater())
             .add(new GeneralDataUpdater())
             .add(new CriteriaStatisticsUpdater())
+            .add(new EvaluationArchive())
             .build();
 
         workers.forEach(it -> vertx.deployVerticle(it, workerDeployment));

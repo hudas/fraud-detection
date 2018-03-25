@@ -49,4 +49,8 @@ public class LearningRequest {
     public void setAlreadyProcessedTransaction(boolean alreadyProcessedTransaction) {
         this.alreadyProcessedTransaction = alreadyProcessedTransaction;
     }
+
+    public void markFraud() {
+        fraudulent = true;
+    }
 }
