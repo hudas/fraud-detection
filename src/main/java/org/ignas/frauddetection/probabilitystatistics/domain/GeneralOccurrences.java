@@ -19,6 +19,10 @@ public class GeneralOccurrences {
     }
 
     public float getFraudProbability() {
+        if (totalTransactions == 0) {
+            return 0f;
+        }
+
         return ((float) totalFraudTransactions) / totalTransactions;
     }
 }

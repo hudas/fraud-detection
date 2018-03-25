@@ -55,6 +55,19 @@ public class Risk {
             .reduce((result, criteria) -> result * criteria)
             .orElse(0f);
 
+        if (averageGroupProbability == 0 && probabilityOfCriteriaCombinationInFraudOccurences > 0) {
+            return Value.VERY_HIGH_RISK;
+        }
+
+        if (deviationFromAverage == 0) {
+            if (averageGroupProbability != probabilityOfCriteriaCombinationInFraudOccurences) {
+                return Value.VERY_HIGH_RISK;
+            } else {
+                return Value.EXPECTED_RISK;
+            }
+        }
+
+
         Float ratioOfActualAndGeneralProbability =
             (averageGroupProbability - probabilityOfCriteriaCombinationInFraudOccurences)
                 / deviationFromAverage;

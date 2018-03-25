@@ -20,7 +20,7 @@ public class ResultsAnalyser extends AbstractVerticle {
         EventBus bus = vertx.eventBus();
         bus.registerDefaultCodec(
             ResultLoggingRequest.class,
-            new ImmutableObjectCodec<ResultLoggingRequest>(ResultLoggingRequest.class)
+            new ImmutableObjectCodec<>(ResultLoggingRequest.class)
         );
 
         bus.consumer("results.analyser", request -> {

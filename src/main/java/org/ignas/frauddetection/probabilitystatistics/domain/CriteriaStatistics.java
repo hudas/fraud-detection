@@ -8,16 +8,16 @@ public class CriteriaStatistics {
 
     private String value;
 
-    private long occurrences;
+    private Long occurrences;
 
-    private long fraudOccurrences;
+    private Long fraudOccurrences;
 
 
-    public CriteriaStatistics(String name, String code, long occurrences, long fraudOccurrences) {
+    public CriteriaStatistics(String name, String code, Long occurrences, Long fraudOccurrences) {
         this.name = name;
         this.value = code;
-        this.occurrences = occurrences;
-        this.fraudOccurrences = fraudOccurrences;
+        this.occurrences = occurrences != null ? occurrences : 0;
+        this.fraudOccurrences = fraudOccurrences != null ? fraudOccurrences : 0;
     }
 
     public String getName() {
@@ -28,11 +28,11 @@ public class CriteriaStatistics {
         return value;
     }
 
-    public long getOccurrences() {
+    public Long getOccurrences() {
         return occurrences;
     }
 
-    public long getFraudOccurrences() {
+    public Long getFraudOccurrences() {
         return fraudOccurrences;
     }
 

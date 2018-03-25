@@ -15,31 +15,30 @@ import org.ignas.frauddetection.transactionevaluation.domain.Transaction;
 import org.ignas.frauddetection.transactionevaluation.domain.config.FraudCriteriaEvaluator;
 import org.ignas.frauddetection.transactionevaluation.domain.stats.HistoricalData;
 import org.ignas.frauddetection.transactionevaluation.service.GroupRiskEvaluator;
+import org.ignas.frauddetection.transactionevaluation.service.LearningEventPublisher;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class FraudEvaluationHandler implements Handler<Message<Object>> {
 
     private GroupProbabilityCache cache;
     private ServiceIntegration<Transaction, HistoricalData> transactionStatisticsIntegration;
     private ServiceIntegration<Map<String, String>, ProbabilityStatistics> probabilityStatisticsIntegration;
-    private OneWayServiceIntegration<LearningRequest> learningInitiator;
 
     private static FraudCriteriaEvaluator criteriaEvaluator = new FraudCriteriaEvaluator();
     private static GroupRiskEvaluator evaluator = new GroupRiskEvaluator(criteriaEvaluator);
+    private LearningEventPublisher learningInitiator;
 
     public FraudEvaluationHandler(
         GroupProbabilityCache cache,
         ServiceIntegration<Transaction, HistoricalData> transactionStatisticsIntegration,
         ServiceIntegration<Map<String, String>, ProbabilityStatistics> probabilityStatisticsIntegration,
-        OneWayServiceIntegration<LearningRequest> learningInitiator) {
+        OneWayServiceIntegration<LearningRequest> learningInitiationIntegration) {
 
         this.cache = cache;
         this.transactionStatisticsIntegration = transactionStatisticsIntegration;
         this.probabilityStatisticsIntegration = probabilityStatisticsIntegration;
-        this.learningInitiator = learningInitiator;
+        this.learningInitiator = new LearningEventPublisher(criteriaEvaluator, learningInitiationIntegration);
     }
 
     @Override
@@ -49,60 +48,48 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
             return;
         }
 
-        TransactionData dataDTO = (TransactionData) event.body();
-        Transaction transactionData = mapToDomain(dataDTO);
+        TransactionData requestData = (TransactionData) event.body();
 
-        Future<HistoricalData> transactionStatistics = transactionStatisticsIntegration.load(transactionData);
+        Transaction transactionData = mapToDomain(requestData);
 
-        transactionStatistics.setHandler(data -> {
-            HistoricalData transactionDataHistory = data.result();
+        transactionStatisticsIntegration.load(transactionData)
+            .setHandler(historyLoaded -> {
+                if (historyLoaded.failed()) {
+                    System.out.println("Failed to load transaction history: " + historyLoaded.cause().getMessage());
+                    throw new IllegalStateException(historyLoaded.cause());
+                }
 
-            Map<String, String> criteriaValues = criteriaEvaluator.evaluateAll(transactionData, transactionDataHistory);
+                Map<String, String> criteriaValues =
+                    criteriaEvaluator.evaluateAll(transactionData, historyLoaded.result());
 
-            Future<ProbabilityStatistics> probabilityStatistics = probabilityStatisticsIntegration.load(criteriaValues);
+                Future<ProbabilityStatistics> probabilityStatistics = probabilityStatisticsIntegration.load(criteriaValues);
 
-            probabilityStatistics.setHandler(
-                probabilityLoader -> {
+                probabilityStatistics.setHandler(probabilitiesLoaded -> {
+                    if (probabilitiesLoaded.failed()) {
+                        System.out.println("Failed to load probabilities: " + probabilitiesLoaded.cause().getMessage());
+                        throw new IllegalStateException(probabilitiesLoaded.cause());
+                    }
 
-                    ProbabilityStatistics statistics = probabilityLoader.result();
+                    ProbabilityStatistics statistics = probabilitiesLoaded.result();
 
                     Map<String, Risk.Value> groupValues = evaluator.evaluate(statistics);
 
-                    Float fraudProbability = groupValues.entrySet()
-                        .stream()
-                        .map(entry -> cache.getProbability(entry.getKey(), entry.getValue().name()))
-                        .reduce(statistics.getFraudProbability(), (result, increment) -> result * increment);
+                    Float fraudProbability = calculateFraudProbability(statistics.getFraudProbability(), groupValues);
 
                     event.reply(fraudProbability);
 
-                    Map<String, String> groupValueRepresentations = groupValues.entrySet()
-                        .stream()
-                        .collect(Collectors.toMap(Map.Entry::getKey, value -> value.getValue().name()));
-
-                    Map<String, Map<String, String>> groupedCriteriaValues = new HashMap<>();
-
-                    for (Map.Entry<String, String> entries : criteriaValues.entrySet()) {
-                        String group = criteriaEvaluator.resolveGroup(entries.getKey());
-
-                        Map<String, String> values = groupedCriteriaValues.get(group);
-                        if (values == null) {
-                            values = new HashMap<>();
-                            groupedCriteriaValues.put(group, values);
-                        }
-
-                        values.put(entries.getKey(), entries.getValue());
-                    }
-
-                    learningInitiator.publish(
-                        new LearningRequest(
-                        false,
-                            dataDTO,
-                            groupedCriteriaValues,
-                            groupValueRepresentations
-                        )
-                    );
+                    learningInitiator.publishData(requestData, criteriaValues, groupValues);
                 });
-        });
+            });
+    }
+
+
+
+    private Float calculateFraudProbability(Float fraudProbability, Map<String, Risk.Value> groupValues) {
+        return groupValues.entrySet()
+            .stream()
+            .map(entry -> cache.getProbability(entry.getKey(), entry.getValue().name()))
+            .reduce(fraudProbability, (result, increment) -> result * increment);
     }
 
 

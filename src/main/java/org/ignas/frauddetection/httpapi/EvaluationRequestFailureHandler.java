@@ -19,8 +19,13 @@ public class EvaluationRequestFailureHandler implements Handler<RoutingContext> 
             response.setStatusCode(HttpStatus.SC_BAD_REQUEST)
                 .end("Bad request:\n" + context.failure().getMessage());
         } else {
-            response.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR)
-                .end("Internal error:\n" + context.failure().getMessage());
+            if (failure != null) {
+                response.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+                    .end("Internal error:\n" + context.failure().getMessage());
+            } else {
+                response.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+                    .end("Unknown Internal error");
+            }
         }
     }
 }

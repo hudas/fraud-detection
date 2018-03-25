@@ -44,6 +44,13 @@ public class GeneralProbabilitiesStorage {
             if (t != null) {
                 System.out.println(t.getMessage());
                 loader.fail(t);
+                return;
+            }
+
+//            Initial system launch, without data yet available
+            if (result == null) {
+                loader.complete(new GeneralOccurrences(0, 0));
+                return;
             }
 
             loader.complete(

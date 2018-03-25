@@ -54,7 +54,9 @@ public class CriteriaStorage {
                 doc -> statisticsResult.addAll(extractValues(doc)),
                 (result, t) -> {
                     if (t != null) {
+                        t.printStackTrace();
                         loader.fail(t);
+                        return;
                     }
 
                     loader.complete(statisticsResult);
@@ -75,6 +77,7 @@ public class CriteriaStorage {
             .map(criterion -> fetchStatistics(criterion.getKey(), criterion.getValue()))
             .forEach(loader -> loader.setHandler(criteriaResult -> {
                 if (loader.failed()) {
+                    loader.cause().printStackTrace();
                     totalLoader.fail(loader.cause());
                     return;
                 }
@@ -102,7 +105,21 @@ public class CriteriaStorage {
             .projection(Projections.include("name", "values.$"))
             .first((result, t) -> {
                 if (t != null) {
+                    t.printStackTrace();
                     loader.fail(t);
+                    return;
+                }
+
+                if (result == null) {
+                    loader.complete(
+                        new CriteriaStatistics(
+                            name,
+                            value,
+                            0l,
+                            0l
+                        )
+                    );
+                    return;
                 }
 
                 Document values = Iterables.getFirst((List< Document >) result.get("values"), null);

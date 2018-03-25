@@ -23,6 +23,7 @@ public class ProbabilityCalculatorIntegration implements ServiceIntegration<Eval
 
             if (!(reply.result().body() instanceof Float)) {
                 loader.fail(new IllegalStateException("Unsupported message type: " + reply.result().getClass()));
+                return;
             }
 
             loader.complete((Float) reply.result().body());

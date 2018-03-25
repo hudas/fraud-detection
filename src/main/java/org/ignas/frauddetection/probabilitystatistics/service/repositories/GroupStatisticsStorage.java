@@ -49,7 +49,9 @@ public class GroupStatisticsStorage {
             .projection(Projections.include(NAME_FIELD, COMBINATIONS_DOC + ".$"))
             .first((result, t) -> {
                 if (t != null) {
+                    t.printStackTrace();
                     loader.fail(t);
+                    return;
                 }
 
                 Document loadedCombination = getFirst((List <Document>) result.get(COMBINATIONS_DOC), null);
@@ -82,8 +84,8 @@ public class GroupStatisticsStorage {
                     resultMap.put(
                         name,
                         new GroupTotalStats(
-                            totals.getLong(AVERAGE_PROBABILITY_FIELD),
-                            totals.getLong(DEVIATION_PROBABILITY_FIELD),
+                            totals.getDouble(AVERAGE_PROBABILITY_FIELD).floatValue(),
+                            totals.getDouble(DEVIATION_PROBABILITY_FIELD).floatValue(),
                             totals.getLong(OCCURRENCES_SUM_FIELD),
                             totals.getLong(SQUARED_OCCURRENCES_SUM_FIELD)
                         )
@@ -93,6 +95,7 @@ public class GroupStatisticsStorage {
                     if (t != null) {
                         System.out.println(t.getMessage());
                         loader.fail(t);
+                        return;
                     }
 
                     loader.complete(resultMap);
@@ -136,7 +139,9 @@ public class GroupStatisticsStorage {
 
         groupStatistics.bulkWrite(updates, new BulkWriteOptions().ordered(false), ((result, t) -> {
             if (t != null) {
+                t.printStackTrace();
                 loader.fail(t);
+                return;
             }
 
             loader.complete();
@@ -180,6 +185,7 @@ public class GroupStatisticsStorage {
             if (t != null) {
                 System.out.println(t.getMessage());
                 loader.fail(t);
+                return;
             }
 
             loader.complete();
@@ -222,8 +228,8 @@ public class GroupStatisticsStorage {
             new Document("$setOnInsert", new Document(NAME_FIELD, groupName)
                 .append(COMBINATIONS_DOC, new ArrayList<>())
                 .append(TOTALS_DOC,
-                    new Document(AVERAGE_PROBABILITY_FIELD, 0l)
-                        .append(DEVIATION_PROBABILITY_FIELD, 0l)
+                    new Document(AVERAGE_PROBABILITY_FIELD, 0f)
+                        .append(DEVIATION_PROBABILITY_FIELD, 0f)
                         .append(OCCURRENCES_SUM_FIELD, 0l)
                         .append(SQUARED_OCCURRENCES_SUM_FIELD, 0l)
                 )
