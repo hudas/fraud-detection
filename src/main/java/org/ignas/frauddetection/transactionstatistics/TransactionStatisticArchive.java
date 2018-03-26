@@ -67,11 +67,5 @@ public class TransactionStatisticArchive extends AbstractVerticle {
 
         bus.consumer("transaction-statistic.archive")
             .handler(message -> message.reply(TEMPORARY_HARDCODED_RESULT));
-
-        bus.consumer("learning.processing-request")
-            .handler(message -> {
-
-                System.out.println("Received request to learn!");
-            });
     }
 }
