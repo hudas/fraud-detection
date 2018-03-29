@@ -1,20 +1,29 @@
 package org.ignas.frauddetection.transactionstatistics;
 
+import com.google.common.collect.Lists;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.probabilitystatistics.service.repositories.GeneralProbabilitiesStorage;
-import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
+import org.ignas.frauddetection.shared.Location;
+import org.ignas.frauddetection.transactionstatistics.domain.ConditionOccurrences;
+import org.ignas.frauddetection.transactionstatistics.repositories.ConditionStorage;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static com.google.common.collect.Lists.newArrayList;
+import static org.ignas.frauddetection.transactionstatistics.domain.LocationService.toNearestArea;
 
 public class ExternalConditionUpdater extends AbstractVerticle {
 
-    private GeneralProbabilitiesStorage probabilitiesStorage;
+    private ConditionStorage conditionStorage;
 
     public ExternalConditionUpdater() {
-        probabilitiesStorage = new GeneralProbabilitiesStorage(
+        conditionStorage = new ConditionStorage(
             "mongodb://localhost",
-            "bayes",
+            "transactions",
             "externalConditions"
         );
     }
@@ -29,18 +38,48 @@ public class ExternalConditionUpdater extends AbstractVerticle {
             }
 
             BatchToProcess batch = (BatchToProcess) batchEvent.body();
-//
-//            int newTransactions = (int) batch.getItems()
-//                .stream()
-//                .filter(request -> !request.isAlreadyProcessedTransaction())
-//                .count();
-//
-//            int newFraudulentTransactions = (int) batch.getItems()
-//                .stream()
-//                .filter(LearningRequest::isFraudulent)
-//                .count();
-//
-//            probabilitiesStorage.persist(newTransactions, newFraudulentTransactions);
+
+            Map<String, ConditionOccurrences> creditorOccurrences = new HashMap<>();
+
+            batch.getItems().forEach(item -> {
+                ConditionOccurrences<String> creditor = creditorOccurrences.computeIfAbsent(
+                    item.getTransaction().getCreditorId(), ConditionOccurrences::empty);
+
+                int nonFraudIncrement = !item.isAlreadyProcessedTransaction() ? 1 : 0;
+                int fraudIncrement = item.isFraudulent() ? 1 : 0;
+
+                creditor.increaseOccurrences(nonFraudIncrement, fraudIncrement);
+            });
+
+            Map<Integer, ConditionOccurrences> timeOccurrences = new HashMap<>();
+
+            batch.getItems().forEach(item -> {
+                ConditionOccurrences<String> creditor = timeOccurrences.computeIfAbsent(
+                    item.getTransaction().getTime().getHourOfDay(), ConditionOccurrences::empty);
+
+                int nonFraudIncrement = !item.isAlreadyProcessedTransaction() ? 1 : 0;
+                int fraudIncrement = item.isFraudulent() ? 1 : 0;
+
+                creditor.increaseOccurrences(nonFraudIncrement, fraudIncrement);
+            });
+
+            Map<Location, ConditionOccurrences> locationOccurrences = new HashMap<>();
+
+            batch.getItems().forEach(item -> {
+                ConditionOccurrences<Location> creditor = locationOccurrences.<Location>computeIfAbsent(
+                    toNearestArea(item.getTransaction().getLocation()), ConditionOccurrences::<Location>empty);
+
+                int nonFraudIncrement = !item.isAlreadyProcessedTransaction() ? 1 : 0;
+                int fraudIncrement = item.isFraudulent() ? 1 : 0;
+
+                creditor.increaseOccurrences(nonFraudIncrement, fraudIncrement);
+            });
+
+            conditionStorage.updateOccurrences(
+                newArrayList(creditorOccurrences.values()),
+                newArrayList(timeOccurrences.values()),
+                newArrayList(locationOccurrences.values())
+            );
 
             // Resend same event without any modifications
             bus.publish("transaction-processing.conditions-updated", batch);
