@@ -3,19 +3,12 @@ package org.ignas.frauddetection.transactionstatistics.api.response.generalindic
 
 public class DistanceDifferenceStatistics {
 
-    private int periodLength;
-
     private float average;
     private float deviationAverage;
 
-    public DistanceDifferenceStatistics(int periodLength, float average, float deviationAverage) {
-        this.periodLength = periodLength;
+    public DistanceDifferenceStatistics(float average, float deviationAverage) {
         this.average = average;
         this.deviationAverage = deviationAverage;
-    }
-
-    public int getPeriodLength() {
-        return periodLength;
     }
 
     public float getAverage() {

@@ -3,14 +3,19 @@ package org.ignas.frauddetection.transactionstatistics;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.shared.ImmutableObjectCodec;
 import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionstatistics.api.request.StatisticsRequest;
 import org.ignas.frauddetection.transactionstatistics.api.response.*;
 import org.ignas.frauddetection.transactionstatistics.api.response.generalindicators.*;
+import org.ignas.frauddetection.transactionstatistics.domain.ExternalConditions;
 import org.ignas.frauddetection.transactionstatistics.domain.LocationService;
+import org.ignas.frauddetection.transactionstatistics.domain.NonPeriodicGeneralStats;
 import org.ignas.frauddetection.transactionstatistics.repositories.ConditionStorage;
+import org.ignas.frauddetection.transactionstatistics.repositories.GeneralTransactionsStorage;
 import org.joda.time.LocalDateTime;
 
 public class TransactionStatisticArchive extends AbstractVerticle {
@@ -49,22 +54,27 @@ public class TransactionStatisticArchive extends AbstractVerticle {
                 new CountStatistics(30, 20, 3, 22, 3)
             ),
             Lists.newArrayList(
-                new TimeDifferenceStatistics(7, 1, 2, 3, 4)
+                new TimeDifferenceStatistics(1f, 2f)
             ),
             Lists.newArrayList(
-                new DistanceDifferenceStatistics(7, 10f, 15f)
+                new DistanceDifferenceStatistics(10f, 15f)
             ),
             Lists.newArrayList(
-                new DistanceDifferenceStatistics(7, 10f, 15f)
+                new DistanceDifferenceStatistics(10f, 15f)
             )
         )
     );
 
+    private GeneralTransactionsStorage generalTransactionsStorage;
 
     private ConditionStorage conditionStorage;
 
     public TransactionStatisticArchive() {
-        this.conditionStorage = new ConditionStorage("mongodb://localhost", "transactions", <"externalConditions");
+        this.conditionStorage = new ConditionStorage("mongodb://localhost", "transactions");
+        generalTransactionsStorage = new GeneralTransactionsStorage(
+            "mongodb://localhost",
+            "transactions"
+        );
     }
 
     @Override
@@ -83,13 +93,50 @@ public class TransactionStatisticArchive extends AbstractVerticle {
 
                 StatisticsRequest request = (StatisticsRequest) message.body();
 
-                conditionStorage.fetchOccurrences(
+                Future<ExternalConditions> conditionsLoader = conditionStorage.fetchOccurrences(
                     request.getRequestByCreditorId(),
                     request.getRequestByTime(),
                     LocationService.toNearestArea(request.getRequestByLocation())
-                ).setHandler(resultLoaded -> {
-                    message.reply(TEMPORARY_HARDCODED_RESULT);
-                });
+                );
+
+                Future<NonPeriodicGeneralStats> statsLoader = generalTransactionsStorage.fetchNonPeriodicStats();
+
+                CompositeFuture.all(conditionsLoader, statsLoader).setHandler(
+                    event -> {
+                        if (event.failed()) {
+                            event.cause().printStackTrace();
+                            throw new IllegalStateException(event.cause());
+                        }
+
+                        ExternalConditions conditions = event.result().resultAt(0);
+
+
+                        NonPeriodicGeneralStats nonPeriodicStats = event.result().resultAt(1);
+
+                        float averageTimeDiff = ((float) nonPeriodicStats.getSumOfTimeDiffFromLast()) / nonPeriodicStats.getInstances();
+                        float deviationTimeDiff = calcDeviation(nonPeriodicStats.getInstances(), averageTimeDiff, nonPeriodicStats.getSumOfTimeDiffFromLast(), nonPeriodicStats.getSumOfSquaredTimeDiffFromLast());
+
+                        TimeDifferenceStatistics timeDiff = new TimeDifferenceStatistics(averageTimeDiff, deviationTimeDiff);
+
+                        float averageDistanceLast = nonPeriodicStats.getSumOfDistanceFromLast() / nonPeriodicStats.getInstances();
+                        float deviationDistanceLast = calcDeviation(nonPeriodicStats.getInstances(), averageDistanceLast, nonPeriodicStats.getSumOfDistanceFromLast(), nonPeriodicStats.getSumOfSquaredTimeDiffFromLast());
+
+                        DistanceDifferenceStatistics lastDiff = new DistanceDifferenceStatistics(averageDistanceLast, deviationDistanceLast);
+
+                        float averageDistanceCommon = nonPeriodicStats.getSumOfDistanceFromLast() / nonPeriodicStats.getInstances();
+                        float deviationDistanceCommon = calcDeviation(nonPeriodicStats.getInstances(), averageDistanceCommon, nonPeriodicStats.getSumOfDistanceFromComm(), nonPeriodicStats.getSumOfSquaredDistanceFromComm());
+
+                        DistanceDifferenceStatistics commonDiff = new DistanceDifferenceStatistics(averageDistanceCommon, deviationDistanceCommon);
+
+
+                    }
+                )
             });
+    }
+
+    private float calcDeviation(long instances, float average, float sum, float squaredSum) {
+        float denominator = instances * average * average - 2 * average * sum + squaredSum;
+
+        return (float) Math.sqrt(denominator / (instances - 1));
     }
 }

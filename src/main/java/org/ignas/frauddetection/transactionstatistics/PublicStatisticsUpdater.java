@@ -5,17 +5,18 @@ import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.probabilitystatistics.service.repositories.GeneralProbabilitiesStorage;
+import org.ignas.frauddetection.transactionevaluation.api.request.BehaviourData;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
+import org.ignas.frauddetection.transactionstatistics.repositories.GeneralTransactionsStorage;
 
 public class PublicStatisticsUpdater extends AbstractVerticle {
 
-    private GeneralProbabilitiesStorage probabilitiesStorage;
+    private GeneralTransactionsStorage generalTransactionsStorage;
 
     public PublicStatisticsUpdater() {
-        probabilitiesStorage = new GeneralProbabilitiesStorage(
+        generalTransactionsStorage = new GeneralTransactionsStorage(
             "mongodb://localhost",
-            "bayes",
-            "publicStatistics"
+            "transactions"
         );
     }
 
@@ -29,18 +30,40 @@ public class PublicStatisticsUpdater extends AbstractVerticle {
             }
 
             BatchToProcess batch = (BatchToProcess) batchEvent.body();
-//
-//            int newTransactions = (int) batch.getItems()
-//                .stream()
-//                .filter(request -> !request.isAlreadyProcessedTransaction())
-//                .count();
-//
-//            int newFraudulentTransactions = (int) batch.getItems()
-//                .stream()
-//                .filter(LearningRequest::isFraudulent)
-//                .count();
-//
-//            probabilitiesStorage.persist(newTransactions, newFraudulentTransactions);
+
+            long timeDiffIncrement = 0;
+            long squaredTimeDiffIncrement = 0;
+
+            float distanceFromLastIncrement = 0;
+            float squaredDistanceFromLastIncrement = 0;
+
+            float distanceFromCommonIncrement = 0;
+            float squaredDistanceFromCommonIncrement = 0;
+
+            for (LearningRequest request : batch.getItems()) {
+                BehaviourData data = request.getBehaviourData();
+
+                long timeDiff = data.getTimeDifferenceFromLast();
+                timeDiffIncrement += timeDiff;
+                squaredTimeDiffIncrement += timeDiff * timeDiff;
+
+                float distanceFromLast = data.getDistanceFromLast();
+                distanceFromLastIncrement += distanceFromLast;
+                squaredDistanceFromLastIncrement += distanceFromLast * distanceFromLast;
+
+                float distanceFromCommon = data.getDistanceFromLast();
+                distanceFromLastIncrement += distanceFromCommon;
+                squaredDistanceFromLastIncrement += distanceFromCommon * distanceFromCommon;
+            }
+
+            long additionalInstances = batch.getItems().size();
+
+            generalTransactionsStorage.increment(
+                additionalInstances,
+                timeDiffIncrement, squaredTimeDiffIncrement,
+                distanceFromLastIncrement, squaredDistanceFromLastIncrement,
+                distanceFromCommonIncrement, squaredDistanceFromCommonIncrement
+            );
 
             // Resend same event without any modifications
             bus.publish("transaction-processing.public-data-updated", batch);

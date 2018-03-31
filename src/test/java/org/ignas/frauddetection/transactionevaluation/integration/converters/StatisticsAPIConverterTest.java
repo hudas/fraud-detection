@@ -48,7 +48,7 @@ class StatisticsAPIConverterTest {
                 new CountStatistics(7, 10.0f, 2f, 12f, 3f)
             ),
             ImmutableList.of(
-                new TimeDifferenceStatistics(1, 36000, 3600, 36600, 3300)
+                new TimeDifferenceStatistics(1, 36000, 3600)
             ),
             ImmutableList.of(
                 new DistanceDifferenceStatistics(1, 0.24f, 0.03f)

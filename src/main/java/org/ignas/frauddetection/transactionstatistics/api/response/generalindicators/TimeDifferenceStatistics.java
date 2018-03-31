@@ -2,39 +2,22 @@ package org.ignas.frauddetection.transactionstatistics.api.response.generalindic
 
 public class TimeDifferenceStatistics {
 
-    private int periodLength;
+    private float average;
+    private float deviationAverage;
 
-    private int average;
-    private int deviationAverage;
+    public TimeDifferenceStatistics(
+        float average,
+        float deviationAverage) {
 
-    private int expected;
-    private int deviationExpected;
-
-    public TimeDifferenceStatistics(int periodLength, int average, int deviationAverage, int expected, int deviationExpected) {
-        this.periodLength = periodLength;
         this.average = average;
         this.deviationAverage = deviationAverage;
-        this.expected = expected;
-        this.deviationExpected = deviationExpected;
     }
 
-    public int getPeriodLength() {
-        return periodLength;
-    }
-
-    public int getAverage() {
+    public float getAverage() {
         return average;
     }
 
-    public int getDeviationAverage() {
+    public float getDeviationAverage() {
         return deviationAverage;
-    }
-
-    public int getExpected() {
-        return expected;
-    }
-
-    public int getDeviationExpected() {
-        return deviationExpected;
     }
 }
