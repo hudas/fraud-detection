@@ -35,7 +35,7 @@ public class ProbabilityCalculatorIntegration implements ServiceIntegration<Eval
     private static TransactionData toResolverAPI(EvaluationRequest domain) {
         return new TransactionData(
             domain.getTransactionId(),
-            domain.getAmount(),
+            domain.getAmount().floatValue(),
             domain.getDebtorAccountId(),
             domain.getCreditorAccountId(),
             domain.getLocation(),

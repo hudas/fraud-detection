@@ -8,12 +8,16 @@ import com.mongodb.async.client.MongoClient;
 import com.mongodb.async.client.MongoClients;
 import com.mongodb.async.client.MongoCollection;
 import com.mongodb.client.model.*;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import org.bson.Document;
 import org.ignas.frauddetection.probabilitystatistics.domain.CriteriaUpdate;
 import org.ignas.frauddetection.probabilitystatistics.service.repositories.CriteriaStorage;
 import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionstatistics.domain.ConditionOccurrences;
+import org.ignas.frauddetection.transactionstatistics.domain.ExternalConditions;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,20 +41,24 @@ public class ConditionStorage {
 
     private MongoClient client;
 
-    private MongoCollection<Document> externalConditions;
+    private MongoCollection<Document> creditorsConditions;
+    private MongoCollection<Document> timeConditions;
+    private MongoCollection<Document> locationConditions;
 
-    public ConditionStorage(String url, String database, String collection) {
+    public ConditionStorage(String url, String database) {
         client = MongoClients.create(url);
 
-        externalConditions = client.getDatabase(database)
-            .getCollection(collection);
+        creditorsConditions = client.getDatabase(database)
+            .getCollection("creditorsConditions");
+        timeConditions = client.getDatabase(database)
+            .getCollection("timeConditions");
+        locationConditions = client.getDatabase(database)
+            .getCollection("locationConditions");
     }
 
 
     /**
-     *  .update({ creditors: { $exists : true }}, { $setOnInsert: { "creditors" : []}}, { upsert : true })
-     *  .update({ "creditors" : { $not : { $elemMatch : { id : "123" }}}}, { $addToSet : { "creditors" : { id: "123", totalOccurences: 0, fraudOccurences: 0 }}})
-     *  .update({ "creditors.id" : "123" }, { $inc : { "creditors.$.totalOccurences" : 1, "creditors.$.fraudOccurences" : 1 }})
+     *  update({ id: "1234" }, { $inc : { "totalOccurrences" : 1, "fraudOccurrences" : 1 }}, {upsert:true})
      *
      * @param creditorOccurences
      * @param timeOccurences
@@ -61,132 +69,136 @@ public class ConditionStorage {
         List<ConditionOccurrences<Integer>> timeOccurences,
         List<ConditionOccurrences<Location>> locationOccurences) {
 
-        List<UpdateOneModel<Document>> initOperations = Stream.of(CREDITORS_OBJECT, LOCATIONS_OBJECT, TIMES_OBJECT)
-            .map(this::buildFieldInitOperation)
+        List<UpdateOneModel<Document>> creditorIncrements = creditorOccurences.stream()
+            .map(this::buildIncrement)
             .collect(Collectors.toList());
 
-        List<UpdateOneModel<Document>> addOperations =
-            buildOperationsForMissingConditions(creditorOccurences, timeOccurences, locationOccurences);
+        List<UpdateOneModel<Document>> timeIncrements = timeOccurences.stream()
+            .map(this::buildIncrement)
+            .collect(Collectors.toList());
 
-        List<UpdateOneModel<Document>> incOperations =
-            buildOperationsForIncrements(creditorOccurences, timeOccurences, locationOccurences);
+        List<UpdateOneModel<Document>> locationIncrements = locationOccurences.stream()
+            .map(this::buildIncrement)
+            .collect(Collectors.toList());
 
-        externalConditions.bulkWrite(
-            initOperations,
+
+        creditorsConditions.bulkWrite(
+            creditorIncrements,
             new BulkWriteOptions().ordered(false),
-            (initResult, initException) -> {
-                if (initException != null) {
-                    System.out.println(initException.getMessage());
+            (result, ex) -> {
+                if (ex != null) {
+                    System.out.println(ex.getMessage());
+                    return;
+                }
+            });
+
+        timeConditions.bulkWrite(
+            timeIncrements,
+            new BulkWriteOptions().ordered(false),
+            (result, ex) -> {
+                if (ex != null) {
+                    System.out.println(ex.getMessage());
+                    return;
+                }
+            });
+
+        locationConditions.bulkWrite(
+            locationIncrements,
+            new BulkWriteOptions().ordered(false),
+            (result, ex) -> {
+                if (ex != null) {
+                    System.out.println(ex.getMessage());
                     return;
                 }
 
-
-                externalConditions.bulkWrite(
-                    addOperations,
-                    new BulkWriteOptions().ordered(false),
-                    (addResult, addException) -> {
-                        if (addException != null) {
-                            System.out.println(addException.getMessage());
-                            return;
-                        }
-
-
-                        externalConditions.bulkWrite(
-                            incOperations,
-                            new BulkWriteOptions().ordered(false),
-                            (incrementResult, incrementException) -> {
-                                if (addException != null) {
-                                    System.out.println(addException.getMessage());
-                                    return;
-                                }
-
-
-                                if (incrementException != null) {
-                                    System.out.println(addException.getMessage());
-                                    return;
-                                }
-                            });
-                    });
             });
     }
 
 
-    private List<UpdateOneModel<Document>> buildOperationsForIncrements(
-        List<ConditionOccurrences<String>> creditorOccurrences,
-        List<ConditionOccurrences<Integer>> timeOccurrences,
-        List<ConditionOccurrences<Location>> locationOccurrences) {
+    private UpdateOneModel<Document> buildIncrement(ConditionOccurrences<?> creditor) {
 
-        List<UpdateOneModel<Document>> addMissingCreditorsOperations = creditorOccurrences.stream()
-            .map(creditor -> buildIncrement(CREDITORS_OBJECT, creditor))
-            .collect(Collectors.toList());
-
-        List<UpdateOneModel<Document>> addMissingTimeOperations = timeOccurrences.stream()
-            .map(time -> buildIncrement(TIMES_OBJECT, time))
-            .collect(Collectors.toList());
-
-        List<UpdateOneModel<Document>> addMissingLocationOperations = locationOccurrences.stream()
-            .map(location -> buildIncrement(LOCATIONS_OBJECT, location))
-            .collect(Collectors.toList());
-
-        return newArrayList(
-            concat(addMissingCreditorsOperations, addMissingTimeOperations, addMissingLocationOperations));
-    }
-
-    private UpdateOneModel<Document> buildIncrement(
-        String containerCollection,
-        ConditionOccurrences<?> creditor) {
-
-        String occurrencesMatcher = join(".", containerCollection, TOTAL_OCCURRENCES_FIELD);
-        String fraudMatcher = join(".", containerCollection, TOTAL_OCCURRENCES_FIELD);
-
-        Document increment = new Document(occurrencesMatcher, creditor.getOccurrences())
-            .append(fraudMatcher, creditor.getOccurrences());
+        Document increment = new Document(TOTAL_OCCURRENCES_FIELD, creditor.getOccurrences())
+            .append(TOTAL_OCCURRENCES_FIELD, creditor.getOccurrences());
 
         return new UpdateOneModel<>(
-            eq(join(".", containerCollection, ID_FIELD)),
-            new Document("$inc", increment)
+            eq(ID_FIELD, creditor.getName()),
+            new Document("$inc", increment),
+            new UpdateOptions().upsert(true)
         );
     }
 
-    private List<UpdateOneModel<Document>> buildOperationsForMissingConditions(
-        List<ConditionOccurrences<String>> creditorOccurences,
-        List<ConditionOccurrences<Integer>> timeOccurences,
-        List<ConditionOccurrences<Location>> locationOccurences) {
+    public Future<ExternalConditions> fetchOccurrences(String creditor, org.joda.time.LocalDateTime hour, Location location) {
+        Future<ConditionOccurrences> creditorLoader = Future.future();
+        creditorsConditions.find(Filters.eq(ID_FIELD, creditor))
+            .first((result, t) -> {
+                if (t != null) {
+                    t.printStackTrace();
+                    return;
+                }
 
-        List<UpdateOneModel<Document>> addMissingCreditorsOperations = creditorOccurences.stream()
-            .map(creditor -> buildMissingConditionAddition(CREDITORS_OBJECT, creditor))
-            .collect(Collectors.toList());
+                ConditionOccurrences mappedResult = new ConditionOccurrences<String>(
+                    result.getString(ID_FIELD),
+                    result.getLong(TOTAL_OCCURRENCES_FIELD),
+                    result.getLong(FRAUD_OCCURRENCES_FIELD)
+                );
 
-        List<UpdateOneModel<Document>> addMissingTimeOperations = timeOccurences.stream()
-            .map(time -> buildMissingConditionAddition(TIMES_OBJECT, time))
-            .collect(Collectors.toList());
+                creditorLoader.complete(mappedResult);
+            });
 
-        List<UpdateOneModel<Document>> addMissingLocationOperations = locationOccurences.stream()
-            .map(location -> buildMissingConditionAddition(LOCATIONS_OBJECT, location))
-            .collect(Collectors.toList());
+        Future<ConditionOccurrences> timeLoader = Future.future();
+        timeConditions.find(Filters.eq(ID_FIELD, hour.getHourOfDay()))
+            .first((result, t) -> {
+                if (t != null) {
+                    t.printStackTrace();
+                    return;
+                }
 
-        return newArrayList(
-            concat(addMissingCreditorsOperations, addMissingTimeOperations, addMissingLocationOperations));
-    }
+                ConditionOccurrences mappedResult = new ConditionOccurrences<Integer>(
+                    result.getInteger(ID_FIELD),
+                    result.getLong(TOTAL_OCCURRENCES_FIELD),
+                    result.getLong(FRAUD_OCCURRENCES_FIELD)
+                );
 
-    private UpdateOneModel<Document> buildMissingConditionAddition(
-        String containerCollection,
-        ConditionOccurrences<?> creditor) {
+                timeLoader.complete(mappedResult);
+            });
 
-        Document emptyCreditor = new Document(ID_FIELD, creditor.getName())
-            .append(TOTAL_OCCURRENCES_FIELD, 0l)
-            .append(FRAUD_OCCURRENCES_FIELD, 0l);
+        Future<ConditionOccurrences> locationLoader = Future.future();
+        locationConditions.find(Filters.eq(ID_FIELD, location.toString()))
+            .first((result, t) -> {
+                if (t != null) {
+                    t.printStackTrace();
+                    return;
+                }
 
-        return new UpdateOneModel<>(
-            not(elemMatch(containerCollection, eq(ID_FIELD, creditor.getName()))),
-            new Document("$addToSet", new Document(containerCollection, emptyCreditor))
-        );
-    }
+                ConditionOccurrences mappedResult = new ConditionOccurrences<String>(
+                    result.getString(ID_FIELD),
+                    result.getLong(TOTAL_OCCURRENCES_FIELD),
+                    result.getLong(FRAUD_OCCURRENCES_FIELD)
+                );
 
-    private UpdateOneModel<Document> buildFieldInitOperation(String field) {
-        return new UpdateOneModel<>(
-            Filters.exists(field, true),
-            new Document("$setInInsert", new Document(field, new ArrayList<>()))
-        );
+                timeLoader.complete(mappedResult);
+            });
+
+        Future<ExternalConditions> future = Future.future();
+
+        CompositeFuture.all(creditorLoader, timeLoader, locationLoader)
+            .setHandler(allLoaded -> {
+                if (allLoaded.failed()) {
+                    allLoaded.cause().printStackTrace();
+                    future.fail(allLoaded.cause());
+                    return;
+                }
+
+                ConditionOccurrences<String> creditorStats =
+                    allLoaded.result().resultAt(0);
+                ConditionOccurrences<Integer> timeStats =
+                    allLoaded.result().resultAt(1);
+                ConditionOccurrences<String> locationStats =
+                    allLoaded.result().resultAt(2);
+
+                future.complete(new ExternalConditions(creditorStats, timeStats, locationStats));
+            });
+
+        return future;
     }
 }

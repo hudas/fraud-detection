@@ -9,6 +9,8 @@ import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionstatistics.api.request.StatisticsRequest;
 import org.ignas.frauddetection.transactionstatistics.api.response.*;
 import org.ignas.frauddetection.transactionstatistics.api.response.generalindicators.*;
+import org.ignas.frauddetection.transactionstatistics.domain.LocationService;
+import org.ignas.frauddetection.transactionstatistics.repositories.ConditionStorage;
 import org.joda.time.LocalDateTime;
 
 public class TransactionStatisticArchive extends AbstractVerticle {
@@ -58,6 +60,13 @@ public class TransactionStatisticArchive extends AbstractVerticle {
         )
     );
 
+
+    private ConditionStorage conditionStorage;
+
+    public TransactionStatisticArchive() {
+        this.conditionStorage = new ConditionStorage("mongodb://localhost", "transactions", <"externalConditions");
+    }
+
     @Override
     public void start() {
         EventBus bus = vertx.eventBus();
@@ -66,6 +75,21 @@ public class TransactionStatisticArchive extends AbstractVerticle {
         bus.registerDefaultCodec(Statistics.class, new ImmutableObjectCodec<>(Statistics.class));
 
         bus.consumer("transaction-statistic.archive")
-            .handler(message -> message.reply(TEMPORARY_HARDCODED_RESULT));
+            .handler(message -> {
+                if (!(message.body() instanceof StatisticsRequest)) {
+                    System.out.println("Unsupported type: " + message.body().getClass());
+                    return;
+                }
+
+                StatisticsRequest request = (StatisticsRequest) message.body();
+
+                conditionStorage.fetchOccurrences(
+                    request.getRequestByCreditorId(),
+                    request.getRequestByTime(),
+                    LocationService.toNearestArea(request.getRequestByLocation())
+                ).setHandler(resultLoaded -> {
+                    message.reply(TEMPORARY_HARDCODED_RESULT);
+                });
+            });
     }
 }
