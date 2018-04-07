@@ -11,13 +11,14 @@ import org.ignas.frauddetection.transactionstatistics.domain.NonPeriodicGeneralS
 
 public class GeneralTransactionsStorage {
 
-    public static final String INSTANCES_FIELD = "instances";
-    public static final String SQUARED_DISTANCE_COMMON = "sumOfSquaredistanceFromComm";
-    public static final String DISTANCE_COMMON = "sumOfDistanceFromComm";
-    public static final String SQUARED_DISTANCE_LAST = "sumOfSquaredDistanceFromLast";
-    public static final String DISTANCE_LAST = "sumOfDistanceFromLast";
-    public static final String SQUARED_TIME_DIFFERENCE = "sumOfSquaredTimeDiffFromLast";
-    public static final String TIME_DIFFERENCE = "sumOfTimeDiffFromLast";
+    private static final String INSTANCES_FIELD = "instances";
+    private static final String SQUARED_DISTANCE_COMMON = "sumOfSquaredDistanceFromComm";
+    private static final String DISTANCE_COMMON = "sumOfDistanceFromComm";
+    private static final String SQUARED_DISTANCE_LAST = "sumOfSquaredDistanceFromLast";
+    private static final String DISTANCE_LAST = "sumOfDistanceFromLast";
+    private static final String SQUARED_TIME_DIFFERENCE = "sumOfSquaredTimeDiffFromLast";
+    private static final String TIME_DIFFERENCE = "sumOfTimeDiffFromLast";
+
     private MongoClient client;
 
     private MongoCollection<Document> nonPeriodicGeneralStatistics;

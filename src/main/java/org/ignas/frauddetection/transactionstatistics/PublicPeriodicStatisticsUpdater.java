@@ -8,11 +8,11 @@ import org.ignas.frauddetection.transactionevaluation.api.request.BehaviourData;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
 import org.ignas.frauddetection.transactionstatistics.repositories.GeneralTransactionsStorage;
 
-public class PublicStatisticsUpdater extends AbstractVerticle {
+public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
 
     private GeneralTransactionsStorage nonPeriodicTransactionsStorage;
 
-    public PublicStatisticsUpdater() {
+    public PublicPeriodicStatisticsUpdater() {
         nonPeriodicTransactionsStorage = new GeneralTransactionsStorage(
             "mongodb://localhost",
             "transactions"
@@ -23,7 +23,7 @@ public class PublicStatisticsUpdater extends AbstractVerticle {
     public void start(Future<Void> startFuture) throws Exception {
         EventBus bus = vertx.eventBus();
 
-        bus.consumer("transaction-processing.personal-data-updated", (batchEvent) -> {
+        bus.consumer("transaction-processing.public-non-periodic-data-updated", (batchEvent) -> {
             if (!(batchEvent.body() instanceof BatchToProcess)) {
                 throw new IllegalArgumentException("Unsupported type: " + batchEvent.body().getClass());
             }
@@ -65,7 +65,7 @@ public class PublicStatisticsUpdater extends AbstractVerticle {
             );
 
             // Resend same event without any modifications
-            bus.publish("transaction-processing.public-non-periodic-data-updated", batch);
+            bus.publish("transaction-processing.public-periodic-data-updated", batch);
         });
     }
 }

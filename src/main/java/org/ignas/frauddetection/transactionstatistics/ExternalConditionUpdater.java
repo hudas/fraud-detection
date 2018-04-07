@@ -23,8 +23,7 @@ public class ExternalConditionUpdater extends AbstractVerticle {
     public ExternalConditionUpdater() {
         conditionStorage = new ConditionStorage(
             "mongodb://localhost",
-            "transactions",
-            "externalConditions"
+            "transactions"
         );
     }
 
@@ -32,7 +31,7 @@ public class ExternalConditionUpdater extends AbstractVerticle {
     public void start(Future<Void> startFuture) {
         EventBus bus = vertx.eventBus();
 
-        bus.consumer("transaction-processing.personal-data-updated", (batchEvent) -> {
+        bus.consumer("transaction-processing.public-periodic-data-updated", (batchEvent) -> {
             if (!(batchEvent.body() instanceof BatchToProcess)) {
                 throw new IllegalArgumentException("Unsupported type: " + batchEvent.body().getClass());
             }
