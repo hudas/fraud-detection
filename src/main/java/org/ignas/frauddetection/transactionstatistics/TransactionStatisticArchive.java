@@ -130,7 +130,7 @@ public class TransactionStatisticArchive extends AbstractVerticle {
 
 
                     }
-                )
+                );
             });
     }
 
