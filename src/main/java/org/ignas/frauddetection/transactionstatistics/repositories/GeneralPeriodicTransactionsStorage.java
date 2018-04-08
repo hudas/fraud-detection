@@ -3,16 +3,16 @@ package org.ignas.frauddetection.transactionstatistics.repositories;
 import com.mongodb.async.client.MongoClient;
 import com.mongodb.async.client.MongoClients;
 import com.mongodb.async.client.MongoCollection;
-import com.mongodb.client.model.BulkWriteOptions;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.UpdateOneModel;
-import com.mongodb.client.model.UpdateOptions;
-import io.swagger.models.auth.In;
+import com.mongodb.client.model.*;
 import io.vertx.core.Future;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.ignas.frauddetection.transactionstatistics.domain.PeriodIncrement;
+import org.ignas.frauddetection.transactionstatistics.domain.PeriodStats;
+import org.ignas.frauddetection.transactionstatistics.domain.PeriodValue;
+import org.ignas.frauddetection.transactionstatistics.domain.PeriodicGeneralStats;
+import org.joda.time.LocalDateTime;
 
-import javax.print.Doc;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,14 +33,28 @@ import static com.mongodb.client.model.Filters.*;
  */
 public class GeneralPeriodicTransactionsStorage {
 
-    private static final String INSTANCES_FIELD = "instances";
-    private static final String SQUARED_DISTANCE_COMMON = "sumOfSquaredDistanceFromComm";
-    private static final String DISTANCE_COMMON = "sumOfDistanceFromComm";
-    private static final String SQUARED_DISTANCE_LAST = "sumOfSquaredDistanceFromLast";
-    private static final String DISTANCE_LAST = "sumOfDistanceFromLast";
-    private static final String SQUARED_TIME_DIFFERENCE = "sumOfSquaredTimeDiffFromLast";
-    private static final String TIME_DIFFERENCE = "sumOfTimeDiffFromLast";
+    public static final String START_FIELD = "start";
+    public static final String END_FIELD = "end";
+    public static final String DEBTORS_ID_FIELD = "debtors.id";
+    public static final String DAY_PERIOD = "day";
+    public static final String WEEK_PERIOD = "week";
+    public static final String MONTH_PERIOD = "month";
+    public static final String LENGTH_FIELD = "length";
 
+    public static final String RATIO_FIELD = "ratio";
+    public static final String RATIO_SQUARED_FIELD = "ratio";
+
+    public static final String COUNT_FIELD = "count";
+    public static final String COUNT_SQUARED_FIELD = "countSquared";
+
+    public static final String SUM_FIELD = "sum";
+    public static final String SUM_SQUARED_FIELD = "sumSquared";
+
+    public static final String INSTANCES_FIELD = "instances";
+
+    public static final String DEBTORS_OBJECT = "debtors";
+    public static final String ID_FIELD = "id";
+    public static final String AMOUNTS_FIELD = "amounts";
     private MongoClient client;
 
     private final MongoCollection<Document> dailyArchive;
@@ -73,13 +87,13 @@ public class GeneralPeriodicTransactionsStorage {
 
         List<UpdateOneModel<Document>> increments = new ArrayList<>();
         increments.add(
-            buildTotalUpdateForPeriod("day", newDailyInstances, sumIncrement, countIncrement, dailyRatioIncrement)
+            buildTotalUpdateForPeriod(DAY_PERIOD, newDailyInstances, sumIncrement, countIncrement, dailyRatioIncrement)
         );
         increments.add(
-            buildTotalUpdateForPeriod("week", newWeeklyInstances, sumIncrement, countIncrement, weeklyRatioIncrement)
+            buildTotalUpdateForPeriod(WEEK_PERIOD, newWeeklyInstances, sumIncrement, countIncrement, weeklyRatioIncrement)
         );
         increments.add(
-            buildTotalUpdateForPeriod("month", newMonthlyInstances, sumIncrement, countIncrement, monthlyRatioIncrement)
+            buildTotalUpdateForPeriod(MONTH_PERIOD, newMonthlyInstances, sumIncrement, countIncrement, monthlyRatioIncrement)
         );
 
         periodTotals.bulkWrite(increments, new BulkWriteOptions().ordered(false), (result, t) -> {
@@ -96,13 +110,13 @@ public class GeneralPeriodicTransactionsStorage {
         float countIncrement,
         float ratioIncrement) {
 
-        Document increment = new Document("instances", newDailyInstances)
-            .append("sum", sumIncrement)
-            .append("count", countIncrement)
-            .append("ration", ratioIncrement);
+        Document increment = new Document(INSTANCES_FIELD, newDailyInstances)
+            .append(SUM_FIELD, sumIncrement)
+            .append(COUNT_FIELD, countIncrement)
+            .append(RATIO_FIELD, ratioIncrement);
 
         return new UpdateOneModel<Document>(
-            Filters.eq("length", period),
+            eq(LENGTH_FIELD, period),
             new Document("$inc", increment),
             new UpdateOptions().upsert(true)
         );
@@ -117,7 +131,7 @@ public class GeneralPeriodicTransactionsStorage {
     }
 
     public Future<Integer> updateMonthly(List<PeriodIncrement> increments) {
-        return update(weeklyArchive, increments);
+        return update(monthlyArchive, increments);
     }
 
     private Future<Integer> update(MongoCollection<Document> collection, List<PeriodIncrement> increments) {
@@ -166,34 +180,136 @@ public class GeneralPeriodicTransactionsStorage {
     }
 
     private UpdateOneModel<Document> buildInitPeriodQuery(PeriodIncrement it) {
+        Document emptyDoc = new Document(START_FIELD, it.getStart())
+            .append(END_FIELD, it.getEnd())
+            .append(DEBTORS_OBJECT, new ArrayList<>());
+
         return new UpdateOneModel<Document>(
-            and(eq("start", it.getStart()), eq("end", it.getEnd())),
-            new Document("$setOnInsert", new Document("start", it.getStart()).append("end", it.getEnd()).append("debtors", new ArrayList<>())),
+            and(eq(START_FIELD, it.getStart()), eq(END_FIELD, it.getEnd())),
+            new Document("$setOnInsert", emptyDoc),
             new UpdateOptions().upsert(true)
         );
     }
 
     private UpdateOneModel<Document> buildInitDebtorQuery(PeriodIncrement it) {
+        Document emptyDebtor = new Document(DEBTORS_OBJECT, new Document(ID_FIELD, it.getDebtor())
+            .append(AMOUNTS_FIELD, new ArrayList<>()));
+
         return new UpdateOneModel<Document>(
             and(
-                eq("start", it.getStart()),
-                eq("end", it.getEnd()),
-                not(elemMatch("debtors", eq("id", it.getDebtor())))
+                eq(START_FIELD, it.getStart()),
+                eq(END_FIELD, it.getEnd()),
+                not(elemMatch(DEBTORS_OBJECT, eq(ID_FIELD, it.getDebtor())))
             ),
-            new Document("$addToSet", new Document("debtors", new Document("id", it.getDebtor()).append("amounts", new ArrayList<>())))
+            new Document("$addToSet", emptyDebtor)
         );
     }
 
     private UpdateOneModel<Document> buildAddAmountQuery(PeriodIncrement it) {
         return new UpdateOneModel<Document>(
             and(
-                eq("start", it.getStart()),
-                eq("end", it.getEnd()),
-                eq("debtors.id", it.getDebtor())
+                eq(START_FIELD, it.getStart()),
+                eq(END_FIELD, it.getEnd()),
+                eq(DEBTORS_ID_FIELD, it.getDebtor())
             ),
             new Document("$push", new Document("debtors.$.amounts", it.getAmount()))
         );
     }
 
 
+    public Future<List<PeriodValue>> fetchOldDaily(List<PeriodIncrement> increments) {
+        return fetchValuesBeforeIncrements(dailyArchive, increments);
+    }
+
+    public Future<List<PeriodValue>> fetchOldWeekly(List<PeriodIncrement> increments) {
+        return fetchValuesBeforeIncrements(weeklyArchive, increments);
+    }
+
+    public Future<List<PeriodValue>> fetchOldMonthly(List<PeriodIncrement> increments) {
+        return fetchValuesBeforeIncrements(monthlyArchive, increments);
+    }
+
+
+    private Future<List<PeriodValue>> fetchValuesBeforeIncrements(
+        MongoCollection<Document> collection, List<PeriodIncrement> increments) {
+        Future<List<PeriodValue>> future = Future.future();
+
+        List<Bson> filters = increments.stream()
+            .map(increment ->
+                    and(
+                        eq(START_FIELD, increment.getStart()),
+                        eq(END_FIELD, increment.getEnd()),
+                        eq(DEBTORS_ID_FIELD, increment.getDebtor())
+                    )
+            )
+            .collect(Collectors.toList());
+
+        List<PeriodValue> oldValues = new ArrayList<>();
+
+
+        collection.find(or(filters))
+            .projection(Projections.include(START_FIELD, END_FIELD, "debtors.$"))
+            .forEach(document -> {
+                List<Float> amounts = (List<Float>) document.get("debtors.amounts");
+                Float sum = amounts.stream().reduce(0f, Float::sum);
+
+                oldValues.add(new PeriodValue(
+                    LocalDateTime.fromDateFields(document.getDate(START_FIELD)),
+                    LocalDateTime.fromDateFields(document.getDate(END_FIELD)),
+                    document.getString("debtors.id"),
+                    sum
+                ));
+
+            }, (result, t) -> {
+                if (t != null) {
+                    t.printStackTrace();
+                    return;
+                }
+
+                future.complete(oldValues);
+            });
+
+        return future;
+    }
+
+
+    public Future<PeriodicGeneralStats> fetchPeriodicStats() {
+        Future<PeriodicGeneralStats> future = Future.future();
+
+        PeriodicGeneralStats generalStats = new PeriodicGeneralStats();
+
+        periodTotals.find()
+            .forEach(document -> {
+                PeriodStats stats = new PeriodStats(
+                    document.getDouble(SUM_SQUARED_FIELD).floatValue(),
+                    document.getDouble(COUNT_FIELD).floatValue(),
+                    document.getDouble(COUNT_SQUARED_FIELD).floatValue(),
+                    document.getDouble(SUM_FIELD).floatValue(),
+                    document.getDouble(RATIO_FIELD).floatValue(),
+                    document.getDouble(RATIO_SQUARED_FIELD).floatValue(),
+                    document.getLong(INSTANCES_FIELD)
+                );
+
+                String length = document.getString(LENGTH_FIELD);
+
+                if (length.equals(DAY_PERIOD)) {
+                    generalStats.setDaily(stats);
+                } else if (length.equals(WEEK_PERIOD)) {
+                    generalStats.setWeekly(stats);
+                } else if (length.equals(MONTH_PERIOD)) {
+                    generalStats.setWeekly(stats);
+                }
+                },
+                (result, t) -> {
+                if (t != null) {
+                    t.printStackTrace();
+                    future.fail(t);
+                    return;
+                }
+
+                future.complete(generalStats);
+            });
+
+        return future;
+    }
 }

@@ -80,7 +80,9 @@ public class ConditionStorage {
         List<UpdateOneModel<Document>> locationIncrements = locationOccurences.stream()
             .map(this::buildIncrement)
             .collect(Collectors.toList());
-
+//
+//        creditorOccurences.stream().map(it -> )
+//        creditorsConditions.find()
 
         creditorsConditions.bulkWrite(
             creditorIncrements,
@@ -90,6 +92,9 @@ public class ConditionStorage {
                     System.out.println(ex.getMessage());
                     return;
                 }
+
+                int newCreditorsAdded = result.getInsertedCount();
+
             });
 
         timeConditions.bulkWrite(
@@ -189,12 +194,9 @@ public class ConditionStorage {
                     return;
                 }
 
-                ConditionOccurrences<String> creditorStats =
-                    allLoaded.result().resultAt(0);
-                ConditionOccurrences<Integer> timeStats =
-                    allLoaded.result().resultAt(1);
-                ConditionOccurrences<String> locationStats =
-                    allLoaded.result().resultAt(2);
+                ConditionOccurrences<String> creditorStats = allLoaded.result().resultAt(0);
+                ConditionOccurrences<Integer> timeStats = allLoaded.result().resultAt(1);
+                ConditionOccurrences<String> locationStats = allLoaded.result().resultAt(2);
 
                 future.complete(new ExternalConditions(creditorStats, timeStats, locationStats));
             });

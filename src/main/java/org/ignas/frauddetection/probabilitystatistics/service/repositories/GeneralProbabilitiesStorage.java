@@ -66,16 +66,4 @@ public class GeneralProbabilitiesStorage {
     public void close() {
         client.close();
     }
-
-    public void increment(
-        long timeDiff,
-        long squaredTimeDiff,
-        float distanceFromLast,
-        float squaredDistanceFromLast,
-        float distanceFromCommon,
-        float squaredDistanceFromCommon) {
-
-        
-
-    }
 }

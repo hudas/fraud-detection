@@ -13,12 +13,10 @@ public class SumStatistics {
     private float expected;
     private float deviationExpected;
 
-    public SumStatistics(int periodLength, float average, float deviationAverage, float expected, float deviationExpected) {
+    public SumStatistics(int periodLength, float average, float deviationAverage) {
         this.periodLength = periodLength;
         this.average = average;
         this.deviationAverage = deviationAverage;
-        this.expected = expected;
-        this.deviationExpected = deviationExpected;
     }
 
     public int getPeriodLength() {
@@ -31,13 +29,5 @@ public class SumStatistics {
 
     public float getDeviationAverage() {
         return deviationAverage;
-    }
-
-    public float getExpected() {
-        return expected;
-    }
-
-    public float getDeviationExpected() {
-        return deviationExpected;
     }
 }

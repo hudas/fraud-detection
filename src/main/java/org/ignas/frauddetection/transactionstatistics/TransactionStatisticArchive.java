@@ -1,7 +1,6 @@
 package org.ignas.frauddetection.transactionstatistics;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -11,10 +10,9 @@ import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionstatistics.api.request.StatisticsRequest;
 import org.ignas.frauddetection.transactionstatistics.api.response.*;
 import org.ignas.frauddetection.transactionstatistics.api.response.generalindicators.*;
-import org.ignas.frauddetection.transactionstatistics.domain.ExternalConditions;
-import org.ignas.frauddetection.transactionstatistics.domain.LocationService;
-import org.ignas.frauddetection.transactionstatistics.domain.NonPeriodicGeneralStats;
+import org.ignas.frauddetection.transactionstatistics.domain.*;
 import org.ignas.frauddetection.transactionstatistics.repositories.ConditionStorage;
+import org.ignas.frauddetection.transactionstatistics.repositories.GeneralPeriodicTransactionsStorage;
 import org.ignas.frauddetection.transactionstatistics.repositories.GeneralTransactionsStorage;
 import org.joda.time.LocalDateTime;
 
@@ -24,12 +22,17 @@ public class TransactionStatisticArchive extends AbstractVerticle {
 
 
     private GeneralTransactionsStorage generalTransactionsStorage;
+    private GeneralPeriodicTransactionsStorage generalPeriodicTransactionsStorage;
 
     private ConditionStorage conditionStorage;
 
     public TransactionStatisticArchive() {
         this.conditionStorage = new ConditionStorage("mongodb://localhost", "transactions");
         generalTransactionsStorage = new GeneralTransactionsStorage(
+            "mongodb://localhost",
+            "transactions"
+        );
+        generalPeriodicTransactionsStorage = new GeneralPeriodicTransactionsStorage(
             "mongodb://localhost",
             "transactions"
         );
@@ -59,7 +62,9 @@ public class TransactionStatisticArchive extends AbstractVerticle {
 
                 Future<NonPeriodicGeneralStats> statsLoader = generalTransactionsStorage.fetchNonPeriodicStats();
 
-                CompositeFuture.all(conditionsLoader, statsLoader).setHandler(
+                Future<PeriodicGeneralStats> periodicLoader = generalPeriodicTransactionsStorage.fetchPeriodicStats();
+
+                CompositeFuture.all(conditionsLoader, statsLoader, periodicLoader).setHandler(
                     event -> {
                         if (event.failed()) {
                             event.cause().printStackTrace();
@@ -67,11 +72,8 @@ public class TransactionStatisticArchive extends AbstractVerticle {
                         }
 
                         ExternalConditions conditions = event.result().resultAt(0);
-
-                        conditions.getCreditor().get
-                        new CredibilityScore();
-
                         NonPeriodicGeneralStats nonPeriodicStats = event.result().resultAt(1);
+                        PeriodicGeneralStats periodicStats = event.result().resultAt(2);
 
                         float averageTimeDiff = ((float) nonPeriodicStats.getSumOfTimeDiffFromLast()) / nonPeriodicStats.getInstances();
                         float deviationTimeDiff = calcDeviation(nonPeriodicStats.getInstances(), averageTimeDiff, nonPeriodicStats.getSumOfTimeDiffFromLast(), nonPeriodicStats.getSumOfSquaredTimeDiffFromLast());
@@ -88,6 +90,17 @@ public class TransactionStatisticArchive extends AbstractVerticle {
 
                         DistanceDifferenceStatistics commonDiff = new DistanceDifferenceStatistics(averageDistanceCommon, deviationDistanceCommon);
 
+                        SumStatistics daily = buildSumStatsForPeriod(periodicStats.getDaily(), 1);
+                        SumStatistics weekly = buildSumStatsForPeriod(periodicStats.getWeekly(), 7);
+                        SumStatistics monthly = buildSumStatsForPeriod(periodicStats.getMonthly(), 30);
+
+                        CountStatistics dailyCount = buildCountStatsForPeriod(periodicStats.getDaily(), 1);
+                        CountStatistics weeklyCount = buildCountStatsForPeriod(periodicStats.getWeekly(), 7);
+                        CountStatistics monthlyCount = buildCountStatsForPeriod(periodicStats.getMonthly(), 30);
+
+                        RatioStatistics dailyRatio = buildRatioStatsForPeriod(periodicStats.getDaily(), 1);
+                        RatioStatistics weeklyRatio = buildRatioStatsForPeriod(periodicStats.getWeekly(), 7);
+                        RatioStatistics monthlyRatio = buildRatioStatsForPeriod(periodicStats.getMonthly(), 30);
 
                         Statistics TEMPORARY_HARDCODED_RESULT = new Statistics(
                             new DebtorTransactionStatistics(
@@ -106,21 +119,9 @@ public class TransactionStatisticArchive extends AbstractVerticle {
                             new CredibilityScore(123f, 125f, 12f),
                             new CredibilityScore(123f, 125f, 12f),
                             new PublicStatistics(
-                                newArrayList(
-                                    new SumStatistics(1, 10f,10f, 11f, 6f),
-                                    new SumStatistics(7, 50f,20f, 55f, 11f),
-                                    new SumStatistics(30, 500f,100f, 505f, 120f)
-                                ),
-                                newArrayList(
-                                    new RatioStatistics(1, 10f,1f),
-                                    new RatioStatistics(7, 20f,5f),
-                                    new RatioStatistics(30, 50f,10f)
-                                ),
-                                newArrayList(
-                                    new CountStatistics(1, 1, 0, 2, 1),
-                                    new CountStatistics(7, 3, 0, 5, 1),
-                                    new CountStatistics(30, 20, 3, 22, 3)
-                                ),
+                                newArrayList(daily, weekly, monthly),
+                                newArrayList(dailyRatio, weeklyRatio, monthlyRatio),
+                                newArrayList(dailyCount, weeklyCount, monthlyCount),
                                 newArrayList(timeDiff),
                                 newArrayList(commonDiff),
                                 newArrayList(lastDiff)
@@ -130,6 +131,28 @@ public class TransactionStatisticArchive extends AbstractVerticle {
                     }
                 );
             });
+    }
+
+    private RatioStatistics buildRatioStatsForPeriod(PeriodStats stats, int length) {
+        float averageDailySum = stats.getSum() / stats.getInstances();
+        float deviationDailySum = calcDeviation(stats.getInstances(), averageDailySum, stats.getSum(), stats.getSumSquared());
+
+        return new RatioStatistics(length, averageDailySum, deviationDailySum);
+    }
+
+
+    private CountStatistics buildCountStatsForPeriod(PeriodStats stats, int periodLength) {
+        float averageDailySum = stats.getSum() / stats.getInstances();
+        float deviationDailySum = calcDeviation(stats.getInstances(), averageDailySum, stats.getSum(), stats.getSumSquared());
+
+        return new CountStatistics(periodLength, averageDailySum, deviationDailySum);
+    }
+
+    private SumStatistics buildSumStatsForPeriod(PeriodStats stats, int periodLength) {
+        float averageDailySum = stats.getSum() / stats.getInstances();
+        float deviationDailySum = calcDeviation(stats.getInstances(), averageDailySum, stats.getSum(), stats.getSumSquared());
+
+        return new SumStatistics(periodLength, averageDailySum, deviationDailySum);
     }
 
     private float calcDeviation(long instances, float average, float sum, float squaredSum) {
