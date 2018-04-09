@@ -5,12 +5,13 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
-import org.ignas.frauddetection.transactionevaluation.api.request.BehaviourData;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
 import org.ignas.frauddetection.transactionevaluation.api.request.TransactionData;
 import org.ignas.frauddetection.transactionstatistics.domain.PeriodIncrement;
+import org.ignas.frauddetection.transactionstatistics.domain.DebtorPeriodValue;
+import org.ignas.frauddetection.transactionstatistics.domain.SquaredIncrement;
+import org.ignas.frauddetection.transactionstatistics.domain.TotalIncrement;
 import org.ignas.frauddetection.transactionstatistics.repositories.GeneralPeriodicTransactionsStorage;
-import org.joda.time.DateTime;
 import org.joda.time.LocalDateTime;
 
 import java.util.ArrayList;
@@ -49,6 +50,10 @@ public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
             float totalWeeklyRatioIncrement = 0;
             float totalMonthlyRatioIncrement = 0;
 
+            float totalSquaredDailyRatioIncrement = 0;
+            float totalSquaredWeeklyRatioIncrement = 0;
+            float totalSquaredMonthlyRatioIncrement = 0;
+
             for (LearningRequest request : batch.getItems()) {
                 if (request.isAlreadyProcessedTransaction()) {
                     continue;
@@ -59,9 +64,17 @@ public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
                 totalQuantityIncrement += 1;
                 totalSumIncrement += data.getAmount();
 
-                totalDailyRatioIncrement += request.getBehaviourData().getSumRatioDaily();
-                totalWeeklyRatioIncrement += request.getBehaviourData().getSumRatioWeekly();
-                totalMonthlyRatioIncrement += request.getBehaviourData().getSumRatioMonthly();
+                float dailyRatio = request.getBehaviourData().getSumRatioDaily();
+                float weeklyRatio = request.getBehaviourData().getSumRatioWeekly();
+                float monthlyRatio = request.getBehaviourData().getSumRatioDaily();
+
+                totalDailyRatioIncrement += dailyRatio;
+                totalWeeklyRatioIncrement += weeklyRatio;
+                totalMonthlyRatioIncrement += monthlyRatio;
+
+                totalSquaredDailyRatioIncrement += dailyRatio * dailyRatio;
+                totalSquaredWeeklyRatioIncrement += weeklyRatio * weeklyRatio;
+                totalSquaredMonthlyRatioIncrement += monthlyRatio * monthlyRatio;
 
                 LocalDateTime time = data.getTime();
 
@@ -69,61 +82,120 @@ public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
                     time,
                     time,
                     data.getDebtorId(),
-                    data.getAmount()
+                    data.getAmount(),
+                    1
                 ));
 
                 weeklyIncrements.add(new PeriodIncrement(
                     time.dayOfWeek().withMinimumValue(),
                     time.dayOfWeek().withMaximumValue(),
                     data.getDebtorId(),
-                    data.getAmount()
+                    data.getAmount(),
+                    1
                 ));
 
                 monthlyIncrements.add(new PeriodIncrement(
                     time.dayOfMonth().withMinimumValue(),
                     time.dayOfMonth().withMaximumValue(),
                     data.getDebtorId(),
-                    data.getAmount()
+                    data.getAmount(),
+                    1
                 ));
             }
 
-            Future<Integer> dailyLoader = periodicStorage.updateDaily(dailyIncrements);
-            Future<Integer> weeklyLoader = periodicStorage.updateWeekly(weeklyIncrements);
-            Future<Integer> monthlyLoader = periodicStorage.updateMonthly(monthlyIncrements);
-
             final float finalTotalSumIncrement = totalSumIncrement;
+
             final int finalTotalQuantityIncrement = totalQuantityIncrement;
 
             final float finalTotalDailyRatioIncrement = totalDailyRatioIncrement;
             final float finalTotalWeeklyRatioIncrement = totalWeeklyRatioIncrement;
             final float finalTotalMonthlyRatioIncrement = totalMonthlyRatioIncrement;
 
-            CompositeFuture.all(dailyLoader, weeklyLoader, monthlyLoader)
-                .setHandler(event -> {
-                    if (event.failed()) {
-                        event.cause().printStackTrace();
+            final float finalTotalDailySquaredRatioIncrement = totalSquaredDailyRatioIncrement;
+            final float finalTotalWeeklySquaredRatioIncrement = totalSquaredWeeklyRatioIncrement;
+            final float finalTotalMonthlySquaredRatioIncrement = totalSquaredMonthlyRatioIncrement;
+
+
+            Future<List<DebtorPeriodValue>> previousDailyLoader = periodicStorage.fetchOldDaily(dailyIncrements);
+            Future<List<DebtorPeriodValue>> previousWeeklyLoader = periodicStorage.fetchOldWeekly(weeklyIncrements);
+            Future<List<DebtorPeriodValue>> previousMonthlyLoader = periodicStorage.fetchOldMonthly(monthlyIncrements);
+
+            CompositeFuture.all(previousDailyLoader, previousWeeklyLoader, previousMonthlyLoader)
+                .setHandler(previousDataEvent -> {
+                    if (previousDataEvent.failed()) {
+                        previousDataEvent.cause().printStackTrace();
                         return;
                     }
 
-                    Integer newDailyInstances = event.result().resultAt(0);
-                    Integer newWeeklyInstances = event.result().resultAt(0);
-                    Integer newMonthlyInstances = event.result().resultAt(0);
+                    final List<DebtorPeriodValue> dailyPreviousValues = previousDataEvent.result().resultAt(0);
 
+                    final List<DebtorPeriodValue> weeklyPreviousValues = previousDataEvent.result().resultAt(1);
+                    final List<DebtorPeriodValue> monthlyPreviousValues = previousDataEvent.result().resultAt(2);
 
-                    periodicStorage.updateTotals(
-                        newDailyInstances,
-                        newWeeklyInstances,
-                        newMonthlyInstances,
-                        finalTotalSumIncrement,
-                        finalTotalQuantityIncrement,
-                        finalTotalDailyRatioIncrement,
-                        finalTotalWeeklyRatioIncrement,
-                        finalTotalMonthlyRatioIncrement
-                    );
+                    final SquaredIncrement dailySquares = periodSquaredIncrement(dailyIncrements, dailyPreviousValues);
+                    final SquaredIncrement weeklySquares = periodSquaredIncrement(weeklyIncrements, weeklyPreviousValues);
+                    final SquaredIncrement monthlySquares = periodSquaredIncrement(monthlyIncrements, monthlyPreviousValues);
+
+                    Future<Integer> dailyLoader = periodicStorage.updateDaily(dailyIncrements);
+                    Future<Integer> weeklyLoader = periodicStorage.updateWeekly(weeklyIncrements);
+                    Future<Integer> monthlyLoader = periodicStorage.updateMonthly(monthlyIncrements);
+
+                    CompositeFuture.all(dailyLoader, weeklyLoader, monthlyLoader)
+                        .setHandler(updateEvent -> {
+                            if (updateEvent.failed()) {
+                                updateEvent.cause().printStackTrace();
+                                return;
+                            }
+
+                            Integer newDailyInstances = updateEvent.result().resultAt(0);
+                            Integer newWeeklyInstances = updateEvent.result().resultAt(0);
+                            Integer newMonthlyInstances = updateEvent.result().resultAt(0);
+
+                            periodicStorage.updateTotals(
+                                newDailyInstances,
+                                newWeeklyInstances,
+                                newMonthlyInstances,
+                                finalTotalQuantityIncrement,
+                                new TotalIncrement(finalTotalSumIncrement, dailySquares.getSumIncrement()),
+                                new TotalIncrement(finalTotalSumIncrement, weeklySquares.getSumIncrement()),
+                                new TotalIncrement(finalTotalSumIncrement, monthlySquares.getSumIncrement()),
+                                new TotalIncrement(finalTotalQuantityIncrement, dailySquares.getQuantityIncrement()),
+                                new TotalIncrement(finalTotalQuantityIncrement, weeklySquares.getQuantityIncrement()),
+                                new TotalIncrement(finalTotalQuantityIncrement, monthlySquares.getQuantityIncrement()),
+                                new TotalIncrement(finalTotalDailyRatioIncrement, finalTotalDailySquaredRatioIncrement),
+                                new TotalIncrement(finalTotalWeeklyRatioIncrement, finalTotalWeeklySquaredRatioIncrement),
+                                new TotalIncrement(finalTotalMonthlyRatioIncrement, finalTotalMonthlySquaredRatioIncrement)
+                            );
+
+                            // Resend same event without any modifications
+                            bus.publish("transaction-processing.public-periodic-data-updated", batch);
+                        });
+
                 });
-
-            // Resend same event without any modifications
-            bus.publish("transaction-processing.public-periodic-data-updated", batch);
         });
+    }
+
+    public SquaredIncrement periodSquaredIncrement(List<PeriodIncrement> increments, List<DebtorPeriodValue> oldValues) {
+        float dailySquaredSumDiff = 0;
+        float dailySquaredCountDiff = 0;
+
+        for (PeriodIncrement increment : increments) {
+            DebtorPeriodValue oldValue = oldValues.stream()
+                .filter(value -> value.matches(increment))
+                .findAny()
+                .orElseThrow(IllegalStateException::new);
+
+            float oldSquaredSum = oldValue.getSum() * oldValue.getSum();
+            float newSquaredSum = (oldValue.getSum() + increment.getAmount()) * (oldValue.getSum() + increment.getAmount());
+
+            dailySquaredSumDiff += newSquaredSum - oldSquaredSum;
+
+            float oldSquaredCount = oldValue.getCount() * oldValue.getCount();
+            float newSquaredCount = (oldValue.getCount() + increment.getCount()) * (oldValue.getCount() + increment.getCount());
+
+            dailySquaredCountDiff += oldSquaredCount - newSquaredCount;
+        }
+
+        return new SquaredIncrement(dailySquaredSumDiff, dailySquaredCountDiff);
     }
 }

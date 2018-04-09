@@ -10,18 +10,22 @@ public class PeriodIncrement {
     private LocalDateTime end;
 
     private String debtor;
+
     private float amount;
+    private float count;
 
     public PeriodIncrement(
         LocalDateTime start,
         LocalDateTime end,
         String debtor,
-        float amount) {
+        float amount,
+        float count) {
 
         this.start = start;
         this.end = end;
         this.debtor = debtor;
         this.amount = amount;
+        this.count = count;
     }
 
     public LocalDateTime getStart() {
@@ -38,6 +42,10 @@ public class PeriodIncrement {
 
     public float getAmount() {
         return amount;
+    }
+
+    public float getCount() {
+        return count;
     }
 
     @Override

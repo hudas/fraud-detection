@@ -1,5 +1,6 @@
 package org.ignas.frauddetection.transactionstatistics.repositories;
 
+import com.google.common.collect.ImmutableList;
 import com.mongodb.async.client.MongoClient;
 import com.mongodb.async.client.MongoClients;
 import com.mongodb.async.client.MongoCollection;
@@ -7,10 +8,7 @@ import com.mongodb.client.model.*;
 import io.vertx.core.Future;
 import org.bson.Document;
 import org.bson.conversions.Bson;
-import org.ignas.frauddetection.transactionstatistics.domain.PeriodIncrement;
-import org.ignas.frauddetection.transactionstatistics.domain.PeriodStats;
-import org.ignas.frauddetection.transactionstatistics.domain.PeriodValue;
-import org.ignas.frauddetection.transactionstatistics.domain.PeriodicGeneralStats;
+import org.ignas.frauddetection.transactionstatistics.domain.*;
 import org.joda.time.LocalDateTime;
 
 import java.util.ArrayList;
@@ -55,6 +53,10 @@ public class GeneralPeriodicTransactionsStorage {
     public static final String DEBTORS_OBJECT = "debtors";
     public static final String ID_FIELD = "id";
     public static final String AMOUNTS_FIELD = "amounts";
+    public static final String TYPE_FIELD = "type";
+    public static final String SUM_TYPE = "SUM";
+    public static final String COUNT_TYPE = "COUNT";
+    public static final String RATIO_TYPE = "RATIO";
     private MongoClient client;
 
     private final MongoCollection<Document> dailyArchive;
@@ -78,48 +80,40 @@ public class GeneralPeriodicTransactionsStorage {
     }
 
     /**
-     * db.periodTotals.update({ length: 1 }, { $inc : { sum: 5, count: 1, instances: 1 } }, { upsert: true } )
+     * db.periodTotals.update({ length: 1, type: 'SUM' }, { $inc : { valueSum: 5, squaredValueSum: 1, instances: 1 } }, { upsert: true } )
      */
     public void updateTotals(
-        int newDailyInstances, int newWeeklyInstances, int newMonthlyInstances,
-        float sumIncrement, float countIncrement,
-        float dailyRatioIncrement, float weeklyRatioIncrement, float monthlyRatioIncrement) {
+        int newDailyInstances,
+        int newWeeklyInstances,
+        int newMonthlyInstances,
+        int totalInstances,
+        TotalIncrement dailySum,
+        TotalIncrement weeklySum,
+        TotalIncrement monthlySum,
+        TotalIncrement dailyCount,
+        TotalIncrement weeklyCount,
+        TotalIncrement monthlyCount,
+        TotalIncrement dailyRatio,
+        TotalIncrement weeklyRatio,
+        TotalIncrement monthlyRatio) {
 
-        List<UpdateOneModel<Document>> increments = new ArrayList<>();
-        increments.add(
-            buildTotalUpdateForPeriod(DAY_PERIOD, newDailyInstances, sumIncrement, countIncrement, dailyRatioIncrement)
-        );
-        increments.add(
-            buildTotalUpdateForPeriod(WEEK_PERIOD, newWeeklyInstances, sumIncrement, countIncrement, weeklyRatioIncrement)
-        );
-        increments.add(
-            buildTotalUpdateForPeriod(MONTH_PERIOD, newMonthlyInstances, sumIncrement, countIncrement, monthlyRatioIncrement)
-        );
+        List<UpdateOneModel<Document>> increments = ImmutableList.<UpdateOneModel<Document>>builder()
+            .add(buildTotalUpdateForPeriod(DAY_PERIOD, SUM_TYPE, SUM_FIELD, SUM_SQUARED_FIELD, newDailyInstances, dailySum))
+            .add(buildTotalUpdateForPeriod(WEEK_PERIOD, SUM_TYPE, SUM_FIELD, SUM_SQUARED_FIELD, newWeeklyInstances, weeklySum))
+            .add(buildTotalUpdateForPeriod(MONTH_PERIOD, SUM_TYPE, SUM_FIELD, SUM_SQUARED_FIELD, newMonthlyInstances, monthlySum))
+            .add(buildTotalUpdateForPeriod(DAY_PERIOD, COUNT_TYPE, COUNT_FIELD, COUNT_SQUARED_FIELD, newDailyInstances, dailyCount))
+            .add(buildTotalUpdateForPeriod(WEEK_PERIOD, COUNT_TYPE, COUNT_FIELD, COUNT_SQUARED_FIELD, newWeeklyInstances, weeklyCount))
+            .add(buildTotalUpdateForPeriod(MONTH_PERIOD, COUNT_TYPE, COUNT_FIELD, COUNT_SQUARED_FIELD, newMonthlyInstances, monthlyCount))
+            .add(buildTotalUpdateForPeriod(DAY_PERIOD, RATIO_TYPE, RATIO_FIELD, RATIO_SQUARED_FIELD, totalInstances, dailyRatio))
+            .add(buildTotalUpdateForPeriod(WEEK_PERIOD, RATIO_TYPE, RATIO_FIELD, RATIO_SQUARED_FIELD, totalInstances, weeklyRatio))
+            .add(buildTotalUpdateForPeriod(MONTH_PERIOD, RATIO_TYPE, RATIO_FIELD, RATIO_SQUARED_FIELD, totalInstances, monthlyRatio))
+            .build();
 
         periodTotals.bulkWrite(increments, new BulkWriteOptions().ordered(false), (result, t) -> {
             if (t != null) {
                 t.printStackTrace();
             }
         });
-    }
-
-    private UpdateOneModel<Document> buildTotalUpdateForPeriod(
-        String period,
-        int newDailyInstances,
-        float sumIncrement,
-        float countIncrement,
-        float ratioIncrement) {
-
-        Document increment = new Document(INSTANCES_FIELD, newDailyInstances)
-            .append(SUM_FIELD, sumIncrement)
-            .append(COUNT_FIELD, countIncrement)
-            .append(RATIO_FIELD, ratioIncrement);
-
-        return new UpdateOneModel<Document>(
-            eq(LENGTH_FIELD, period),
-            new Document("$inc", increment),
-            new UpdateOptions().upsert(true)
-        );
     }
 
     public Future<Integer> updateDaily(List<PeriodIncrement> increments) {
@@ -132,6 +126,59 @@ public class GeneralPeriodicTransactionsStorage {
 
     public Future<Integer> updateMonthly(List<PeriodIncrement> increments) {
         return update(monthlyArchive, increments);
+    }
+
+    public Future<List<DebtorPeriodValue>> fetchOldDaily(List<PeriodIncrement> increments) {
+        return fetchValuesBeforeIncrements(dailyArchive, increments);
+    }
+
+    public Future<List<DebtorPeriodValue>> fetchOldWeekly(List<PeriodIncrement> increments) {
+        return fetchValuesBeforeIncrements(weeklyArchive, increments);
+    }
+
+    public Future<List<DebtorPeriodValue>> fetchOldMonthly(List<PeriodIncrement> increments) {
+        return fetchValuesBeforeIncrements(monthlyArchive, increments);
+    }
+
+    public Future<PeriodicGeneralStats> fetchPeriodicStats() {
+        Future<PeriodicGeneralStats> future = Future.future();
+
+        PeriodicGeneralStats generalStats = new PeriodicGeneralStats();
+
+        periodTotals.find()
+            .forEach(document -> {
+
+                PeriodStats stats = new PeriodStats(
+                    document.getDouble(SUM_SQUARED_FIELD).floatValue(),
+                    document.getDouble(COUNT_FIELD).floatValue(),
+                    document.getDouble(COUNT_SQUARED_FIELD).floatValue(),
+                    document.getDouble(SUM_FIELD).floatValue(),
+                    document.getDouble(RATIO_FIELD).floatValue(),
+                    document.getDouble(RATIO_SQUARED_FIELD).floatValue(),
+                    document.getLong(INSTANCES_FIELD)
+                );
+
+                String length = document.getString(LENGTH_FIELD);
+
+                if (length.equals(DAY_PERIOD)) {
+                    generalStats.setDaily(stats);
+                } else if (length.equals(WEEK_PERIOD)) {
+                    generalStats.setWeekly(stats);
+                } else if (length.equals(MONTH_PERIOD)) {
+                    generalStats.setMonthly(stats);
+                }
+                },
+                (result, t) -> {
+                if (t != null) {
+                    t.printStackTrace();
+                    future.fail(t);
+                    return;
+                }
+
+                future.complete(generalStats);
+            });
+
+        return future;
     }
 
     private Future<Integer> update(MongoCollection<Document> collection, List<PeriodIncrement> increments) {
@@ -217,34 +264,21 @@ public class GeneralPeriodicTransactionsStorage {
     }
 
 
-    public Future<List<PeriodValue>> fetchOldDaily(List<PeriodIncrement> increments) {
-        return fetchValuesBeforeIncrements(dailyArchive, increments);
-    }
-
-    public Future<List<PeriodValue>> fetchOldWeekly(List<PeriodIncrement> increments) {
-        return fetchValuesBeforeIncrements(weeklyArchive, increments);
-    }
-
-    public Future<List<PeriodValue>> fetchOldMonthly(List<PeriodIncrement> increments) {
-        return fetchValuesBeforeIncrements(monthlyArchive, increments);
-    }
-
-
-    private Future<List<PeriodValue>> fetchValuesBeforeIncrements(
+    private Future<List<DebtorPeriodValue>> fetchValuesBeforeIncrements(
         MongoCollection<Document> collection, List<PeriodIncrement> increments) {
-        Future<List<PeriodValue>> future = Future.future();
+        Future<List<DebtorPeriodValue>> future = Future.future();
 
         List<Bson> filters = increments.stream()
             .map(increment ->
-                    and(
-                        eq(START_FIELD, increment.getStart()),
-                        eq(END_FIELD, increment.getEnd()),
-                        eq(DEBTORS_ID_FIELD, increment.getDebtor())
-                    )
+                and(
+                    eq(START_FIELD, increment.getStart()),
+                    eq(END_FIELD, increment.getEnd()),
+                    eq(DEBTORS_ID_FIELD, increment.getDebtor())
+                )
             )
             .collect(Collectors.toList());
 
-        List<PeriodValue> oldValues = new ArrayList<>();
+        List<DebtorPeriodValue> oldValues = new ArrayList<>();
 
 
         collection.find(or(filters))
@@ -253,11 +287,12 @@ public class GeneralPeriodicTransactionsStorage {
                 List<Float> amounts = (List<Float>) document.get("debtors.amounts");
                 Float sum = amounts.stream().reduce(0f, Float::sum);
 
-                oldValues.add(new PeriodValue(
+                oldValues.add(new DebtorPeriodValue(
                     LocalDateTime.fromDateFields(document.getDate(START_FIELD)),
                     LocalDateTime.fromDateFields(document.getDate(END_FIELD)),
                     document.getString("debtors.id"),
-                    sum
+                    sum,
+                    amounts.size()
                 ));
 
             }, (result, t) -> {
@@ -272,44 +307,23 @@ public class GeneralPeriodicTransactionsStorage {
         return future;
     }
 
+    private UpdateOneModel<Document> buildTotalUpdateForPeriod(
+        String period,
+        String type,
+        String field,
+        String squaredField,
+        int newInstances,
+        TotalIncrement inc) {
 
-    public Future<PeriodicGeneralStats> fetchPeriodicStats() {
-        Future<PeriodicGeneralStats> future = Future.future();
+        Document increment = new Document(INSTANCES_FIELD, newInstances)
+            .append(field, inc.getValueIncrease())
+            .append(squaredField, inc.getValueIncreaseSquared());
 
-        PeriodicGeneralStats generalStats = new PeriodicGeneralStats();
-
-        periodTotals.find()
-            .forEach(document -> {
-                PeriodStats stats = new PeriodStats(
-                    document.getDouble(SUM_SQUARED_FIELD).floatValue(),
-                    document.getDouble(COUNT_FIELD).floatValue(),
-                    document.getDouble(COUNT_SQUARED_FIELD).floatValue(),
-                    document.getDouble(SUM_FIELD).floatValue(),
-                    document.getDouble(RATIO_FIELD).floatValue(),
-                    document.getDouble(RATIO_SQUARED_FIELD).floatValue(),
-                    document.getLong(INSTANCES_FIELD)
-                );
-
-                String length = document.getString(LENGTH_FIELD);
-
-                if (length.equals(DAY_PERIOD)) {
-                    generalStats.setDaily(stats);
-                } else if (length.equals(WEEK_PERIOD)) {
-                    generalStats.setWeekly(stats);
-                } else if (length.equals(MONTH_PERIOD)) {
-                    generalStats.setWeekly(stats);
-                }
-                },
-                (result, t) -> {
-                if (t != null) {
-                    t.printStackTrace();
-                    future.fail(t);
-                    return;
-                }
-
-                future.complete(generalStats);
-            });
-
-        return future;
+        return new UpdateOneModel<>(
+            and(eq(LENGTH_FIELD, period), eq(TYPE_FIELD, type)),
+            new Document("$inc", increment),
+            new UpdateOptions().upsert(true)
+        );
     }
+
 }
