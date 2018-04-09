@@ -2,29 +2,29 @@ package org.ignas.frauddetection.transactionstatistics.domain;
 
 public class ExternalConditions {
 
-    private ConditionOccurrences<String> creditor;
-    private ConditionOccurrences<Integer> time;
-    private ConditionOccurrences<String> location;
+    private ConditionStats creditor;
+    private ConditionStats time;
+    private ConditionStats location;
 
     public ExternalConditions(
-        ConditionOccurrences<String> creditor,
-        ConditionOccurrences<Integer> time,
-        ConditionOccurrences<String> location) {
+        ConditionStats creditor,
+        ConditionStats time,
+        ConditionStats location) {
 
         this.creditor = creditor;
         this.time = time;
         this.location = location;
     }
 
-    public ConditionOccurrences<String> getCreditor() {
+    public ConditionStats getCreditor() {
         return creditor;
     }
 
-    public ConditionOccurrences<Integer> getTime() {
+    public ConditionStats getTime() {
         return time;
     }
 
-    public ConditionOccurrences<String> getLocation() {
+    public ConditionStats getLocation() {
         return location;
     }
 }

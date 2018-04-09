@@ -75,24 +75,17 @@ public class TransactionStatisticArchive extends AbstractVerticle {
                         NonPeriodicGeneralStats nonPeriodicStats = event.result().resultAt(1);
                         PeriodicGeneralStats periodicStats = event.result().resultAt(2);
 
-                        float averageTimeDiff = ((float) nonPeriodicStats.getSumOfTimeDiffFromLast()) / nonPeriodicStats.getInstances();
-                        float deviationTimeDiff = calcDeviation(nonPeriodicStats.getInstances(), averageTimeDiff, nonPeriodicStats.getSumOfTimeDiffFromLast(), nonPeriodicStats.getSumOfSquaredTimeDiffFromLast());
+                        CredibilityScore creditorScore = buildScore(conditions.getCreditor());
+                        CredibilityScore timeScore = buildScore(conditions.getTime());
+                        CredibilityScore locationScore = buildScore(conditions.getLocation());
 
-                        TimeDifferenceStatistics timeDiff = new TimeDifferenceStatistics(averageTimeDiff, deviationTimeDiff);
+                        TimeDifferenceStatistics timeDiff = buildTimeDiff(nonPeriodicStats);
+                        DistanceDifferenceStatistics lastDiff = buildLastDistanceDiff(nonPeriodicStats);
+                        DistanceDifferenceStatistics commonDiff = buildCommonDistanceDiff(nonPeriodicStats);
 
-                        float averageDistanceLast = nonPeriodicStats.getSumOfDistanceFromLast() / nonPeriodicStats.getInstances();
-                        float deviationDistanceLast = calcDeviation(nonPeriodicStats.getInstances(), averageDistanceLast, nonPeriodicStats.getSumOfDistanceFromLast(), nonPeriodicStats.getSumOfSquaredTimeDiffFromLast());
-
-                        DistanceDifferenceStatistics lastDiff = new DistanceDifferenceStatistics(averageDistanceLast, deviationDistanceLast);
-
-                        float averageDistanceCommon = nonPeriodicStats.getSumOfDistanceFromLast() / nonPeriodicStats.getInstances();
-                        float deviationDistanceCommon = calcDeviation(nonPeriodicStats.getInstances(), averageDistanceCommon, nonPeriodicStats.getSumOfDistanceFromComm(), nonPeriodicStats.getSumOfSquaredDistanceFromComm());
-
-                        DistanceDifferenceStatistics commonDiff = new DistanceDifferenceStatistics(averageDistanceCommon, deviationDistanceCommon);
-
-                        SumStatistics daily = buildSumStatsForPeriod(periodicStats.get(SUM_TYPE, DAY_PERIOD), 1);
-                        SumStatistics weekly = buildSumStatsForPeriod(periodicStats.get(SUM_TYPE, WEEK_PERIOD), 7);
-                        SumStatistics monthly = buildSumStatsForPeriod(periodicStats.get(SUM_TYPE, MONTH_PERIOD), 30);
+                        SumStatistics dailySum = buildSumStatsForPeriod(periodicStats.get(SUM_TYPE, DAY_PERIOD), 1);
+                        SumStatistics weeklySum = buildSumStatsForPeriod(periodicStats.get(SUM_TYPE, WEEK_PERIOD), 7);
+                        SumStatistics monthlySum = buildSumStatsForPeriod(periodicStats.get(SUM_TYPE, MONTH_PERIOD), 30);
 
                         CountStatistics dailyCount = buildCountStatsForPeriod(periodicStats.get(COUNT_TYPE, DAY_PERIOD), 1);
                         CountStatistics weeklyCount = buildCountStatsForPeriod(periodicStats.get(COUNT_TYPE, WEEK_PERIOD), 7);
@@ -115,11 +108,11 @@ public class TransactionStatisticArchive extends AbstractVerticle {
                                     new PersonalPeriod(30,550f,22)
                                 )
                             ),
-                            new CredibilityScore(123f, 125f, 12f),
-                            new CredibilityScore(123f, 125f, 12f),
-                            new CredibilityScore(123f, 125f, 12f),
+                            creditorScore,
+                            timeScore,
+                            locationScore,
                             new PublicStatistics(
-                                newArrayList(daily, weekly, monthly),
+                                newArrayList(dailySum, weeklySum, monthlySum),
                                 newArrayList(dailyRatio, weeklyRatio, monthlyRatio),
                                 newArrayList(dailyCount, weeklyCount, monthlyCount),
                                 newArrayList(timeDiff),
@@ -134,8 +127,40 @@ public class TransactionStatisticArchive extends AbstractVerticle {
             });
     }
 
+    private CredibilityScore buildScore(ConditionStats<?> creditor) {
+        float average = calcAverage(creditor.getValuesSum(), creditor.getInstances());
+        float deviation = calcDeviation(creditor.getInstances(), average, creditor.getValuesSum(), creditor.getValuesSquaredSum());
+
+        return new CredibilityScore(
+            creditor.getMatchingValue(),
+            average,
+            deviation
+        );
+    }
+
+    private TimeDifferenceStatistics buildTimeDiff(NonPeriodicGeneralStats nonPeriodicStats) {
+        float averageTimeDiff = calcAverage((float) nonPeriodicStats.getSumOfTimeDiffFromLast(), nonPeriodicStats.getInstances());
+        float deviationTimeDiff = calcDeviation(nonPeriodicStats.getInstances(), averageTimeDiff, nonPeriodicStats.getSumOfTimeDiffFromLast(), nonPeriodicStats.getSumOfSquaredTimeDiffFromLast());
+
+        return new TimeDifferenceStatistics(averageTimeDiff, deviationTimeDiff);
+    }
+
+    private DistanceDifferenceStatistics buildLastDistanceDiff(NonPeriodicGeneralStats nonPeriodicStats) {
+        float averageDistanceLast = calcAverage(nonPeriodicStats.getSumOfDistanceFromLast(), nonPeriodicStats.getInstances());
+        float deviationDistanceLast = calcDeviation(nonPeriodicStats.getInstances(), averageDistanceLast, nonPeriodicStats.getSumOfDistanceFromLast(), nonPeriodicStats.getSumOfSquaredTimeDiffFromLast());
+
+        return new DistanceDifferenceStatistics(averageDistanceLast, deviationDistanceLast);
+    }
+
+    private DistanceDifferenceStatistics buildCommonDistanceDiff(NonPeriodicGeneralStats nonPeriodicStats) {
+        float averageDistanceCommon = calcAverage(nonPeriodicStats.getSumOfDistanceFromLast(), nonPeriodicStats.getInstances());
+        float deviationDistanceCommon = calcDeviation(nonPeriodicStats.getInstances(), averageDistanceCommon, nonPeriodicStats.getSumOfDistanceFromComm(), nonPeriodicStats.getSumOfSquaredDistanceFromComm());
+
+        return new DistanceDifferenceStatistics(averageDistanceCommon, deviationDistanceCommon);
+    }
+
     private RatioStatistics buildRatioStatsForPeriod(PeriodStats stats, int length) {
-        float averageDailySum = stats.getValueSum() / stats.getInstances();
+        float averageDailySum = calcAverage(stats.getValueSum(), stats.getInstances());
         float deviationDailySum = calcDeviation(stats.getInstances(), averageDailySum, stats.getValueSum(), stats.getValueSumSquared());
 
         return new RatioStatistics(length, averageDailySum, deviationDailySum);
@@ -143,17 +168,21 @@ public class TransactionStatisticArchive extends AbstractVerticle {
 
 
     private CountStatistics buildCountStatsForPeriod(PeriodStats stats, int periodLength) {
-        float averageDailySum = stats.getValueSum() / stats.getInstances();
+        float averageDailySum = calcAverage(stats.getValueSum(), stats.getInstances());
         float deviationDailySum = calcDeviation(stats.getInstances(), averageDailySum, stats.getValueSum(), stats.getValueSumSquared());
 
         return new CountStatistics(periodLength, averageDailySum, deviationDailySum);
     }
 
     private SumStatistics buildSumStatsForPeriod(PeriodStats stats, int periodLength) {
-        float average = stats.getValueSum() / stats.getInstances();
+        float average = calcAverage(stats.getValueSum(), stats.getInstances());
         float deviation = calcDeviation(stats.getInstances(), average, stats.getValueSum(), stats.getValueSumSquared());
 
         return new SumStatistics(periodLength, average, deviation);
+    }
+
+    private float calcAverage(float sum, long instances) {
+        return sum / instances;
     }
 
     private float calcDeviation(long instances, float average, float sum, float squaredSum) {
