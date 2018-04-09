@@ -17,9 +17,9 @@ import org.ignas.frauddetection.transactionstatistics.repositories.GeneralTransa
 import org.joda.time.LocalDateTime;
 
 import static com.google.common.collect.Lists.newArrayList;
+import static org.ignas.frauddetection.transactionstatistics.repositories.GeneralPeriodicTransactionsStorage.*;
 
 public class TransactionStatisticArchive extends AbstractVerticle {
-
 
     private GeneralTransactionsStorage generalTransactionsStorage;
     private GeneralPeriodicTransactionsStorage generalPeriodicTransactionsStorage;
@@ -90,19 +90,19 @@ public class TransactionStatisticArchive extends AbstractVerticle {
 
                         DistanceDifferenceStatistics commonDiff = new DistanceDifferenceStatistics(averageDistanceCommon, deviationDistanceCommon);
 
-                        SumStatistics daily = buildSumStatsForPeriod(periodicStats.getDaily(), 1);
-                        SumStatistics weekly = buildSumStatsForPeriod(periodicStats.getWeekly(), 7);
-                        SumStatistics monthly = buildSumStatsForPeriod(periodicStats.getMonthly(), 30);
+                        SumStatistics daily = buildSumStatsForPeriod(periodicStats.get(SUM_TYPE, DAY_PERIOD), 1);
+                        SumStatistics weekly = buildSumStatsForPeriod(periodicStats.get(SUM_TYPE, WEEK_PERIOD), 7);
+                        SumStatistics monthly = buildSumStatsForPeriod(periodicStats.get(SUM_TYPE, MONTH_PERIOD), 30);
 
-                        CountStatistics dailyCount = buildCountStatsForPeriod(periodicStats.getDaily(), 1);
-                        CountStatistics weeklyCount = buildCountStatsForPeriod(periodicStats.getWeekly(), 7);
-                        CountStatistics monthlyCount = buildCountStatsForPeriod(periodicStats.getMonthly(), 30);
+                        CountStatistics dailyCount = buildCountStatsForPeriod(periodicStats.get(COUNT_TYPE, DAY_PERIOD), 1);
+                        CountStatistics weeklyCount = buildCountStatsForPeriod(periodicStats.get(COUNT_TYPE, WEEK_PERIOD), 7);
+                        CountStatistics monthlyCount = buildCountStatsForPeriod(periodicStats.get(COUNT_TYPE, MONTH_PERIOD), 30);
 
-                        RatioStatistics dailyRatio = buildRatioStatsForPeriod(periodicStats.getDaily(), 1);
-                        RatioStatistics weeklyRatio = buildRatioStatsForPeriod(periodicStats.getWeekly(), 7);
-                        RatioStatistics monthlyRatio = buildRatioStatsForPeriod(periodicStats.getMonthly(), 30);
+                        RatioStatistics dailyRatio = buildRatioStatsForPeriod(periodicStats.get(RATIO_TYPE, DAY_PERIOD), 1);
+                        RatioStatistics weeklyRatio = buildRatioStatsForPeriod(periodicStats.get(RATIO_TYPE, WEEK_PERIOD), 7);
+                        RatioStatistics monthlyRatio = buildRatioStatsForPeriod(periodicStats.get(RATIO_TYPE, MONTH_PERIOD), 30);
 
-                        Statistics TEMPORARY_HARDCODED_RESULT = new Statistics(
+                        Statistics result = new Statistics(
                             new DebtorTransactionStatistics(
                                 new Location(54.25123f, 25.45211f),
                                 new Location(54.25123f, 25.45211f),
@@ -128,31 +128,32 @@ public class TransactionStatisticArchive extends AbstractVerticle {
                             )
                         );
 
+                        message.reply(result);
                     }
                 );
             });
     }
 
     private RatioStatistics buildRatioStatsForPeriod(PeriodStats stats, int length) {
-        float averageDailySum = stats.getSum() / stats.getInstances();
-        float deviationDailySum = calcDeviation(stats.getInstances(), averageDailySum, stats.getSum(), stats.getSumSquared());
+        float averageDailySum = stats.getValueSum() / stats.getInstances();
+        float deviationDailySum = calcDeviation(stats.getInstances(), averageDailySum, stats.getValueSum(), stats.getValueSumSquared());
 
         return new RatioStatistics(length, averageDailySum, deviationDailySum);
     }
 
 
     private CountStatistics buildCountStatsForPeriod(PeriodStats stats, int periodLength) {
-        float averageDailySum = stats.getSum() / stats.getInstances();
-        float deviationDailySum = calcDeviation(stats.getInstances(), averageDailySum, stats.getSum(), stats.getSumSquared());
+        float averageDailySum = stats.getValueSum() / stats.getInstances();
+        float deviationDailySum = calcDeviation(stats.getInstances(), averageDailySum, stats.getValueSum(), stats.getValueSumSquared());
 
         return new CountStatistics(periodLength, averageDailySum, deviationDailySum);
     }
 
     private SumStatistics buildSumStatsForPeriod(PeriodStats stats, int periodLength) {
-        float averageDailySum = stats.getSum() / stats.getInstances();
-        float deviationDailySum = calcDeviation(stats.getInstances(), averageDailySum, stats.getSum(), stats.getSumSquared());
+        float average = stats.getValueSum() / stats.getInstances();
+        float deviation = calcDeviation(stats.getInstances(), average, stats.getValueSum(), stats.getValueSumSquared());
 
-        return new SumStatistics(periodLength, averageDailySum, deviationDailySum);
+        return new SumStatistics(periodLength, average, deviation);
     }
 
     private float calcDeviation(long instances, float average, float sum, float squaredSum) {

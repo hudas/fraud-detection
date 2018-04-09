@@ -39,24 +39,20 @@ public class GeneralPeriodicTransactionsStorage {
     public static final String MONTH_PERIOD = "month";
     public static final String LENGTH_FIELD = "length";
 
-    public static final String RATIO_FIELD = "ratio";
-    public static final String RATIO_SQUARED_FIELD = "ratio";
-
-    public static final String COUNT_FIELD = "count";
-    public static final String COUNT_SQUARED_FIELD = "countSquared";
-
-    public static final String SUM_FIELD = "sum";
-    public static final String SUM_SQUARED_FIELD = "sumSquared";
-
     public static final String INSTANCES_FIELD = "instances";
 
     public static final String DEBTORS_OBJECT = "debtors";
     public static final String ID_FIELD = "id";
     public static final String AMOUNTS_FIELD = "amounts";
     public static final String TYPE_FIELD = "type";
+
     public static final String SUM_TYPE = "SUM";
     public static final String COUNT_TYPE = "COUNT";
     public static final String RATIO_TYPE = "RATIO";
+
+    public static final String VALUE_SUM_FIELD = "valueSum";
+    public static final String VALUE_SQUARED_SUM_FIELD = "valueSquaredSum";
+
     private MongoClient client;
 
     private final MongoCollection<Document> dailyArchive;
@@ -98,15 +94,15 @@ public class GeneralPeriodicTransactionsStorage {
         TotalIncrement monthlyRatio) {
 
         List<UpdateOneModel<Document>> increments = ImmutableList.<UpdateOneModel<Document>>builder()
-            .add(buildTotalUpdateForPeriod(DAY_PERIOD, SUM_TYPE, SUM_FIELD, SUM_SQUARED_FIELD, newDailyInstances, dailySum))
-            .add(buildTotalUpdateForPeriod(WEEK_PERIOD, SUM_TYPE, SUM_FIELD, SUM_SQUARED_FIELD, newWeeklyInstances, weeklySum))
-            .add(buildTotalUpdateForPeriod(MONTH_PERIOD, SUM_TYPE, SUM_FIELD, SUM_SQUARED_FIELD, newMonthlyInstances, monthlySum))
-            .add(buildTotalUpdateForPeriod(DAY_PERIOD, COUNT_TYPE, COUNT_FIELD, COUNT_SQUARED_FIELD, newDailyInstances, dailyCount))
-            .add(buildTotalUpdateForPeriod(WEEK_PERIOD, COUNT_TYPE, COUNT_FIELD, COUNT_SQUARED_FIELD, newWeeklyInstances, weeklyCount))
-            .add(buildTotalUpdateForPeriod(MONTH_PERIOD, COUNT_TYPE, COUNT_FIELD, COUNT_SQUARED_FIELD, newMonthlyInstances, monthlyCount))
-            .add(buildTotalUpdateForPeriod(DAY_PERIOD, RATIO_TYPE, RATIO_FIELD, RATIO_SQUARED_FIELD, totalInstances, dailyRatio))
-            .add(buildTotalUpdateForPeriod(WEEK_PERIOD, RATIO_TYPE, RATIO_FIELD, RATIO_SQUARED_FIELD, totalInstances, weeklyRatio))
-            .add(buildTotalUpdateForPeriod(MONTH_PERIOD, RATIO_TYPE, RATIO_FIELD, RATIO_SQUARED_FIELD, totalInstances, monthlyRatio))
+            .add(buildTotalUpdateForPeriod(DAY_PERIOD, SUM_TYPE, newDailyInstances, dailySum))
+            .add(buildTotalUpdateForPeriod(WEEK_PERIOD, SUM_TYPE, newWeeklyInstances, weeklySum))
+            .add(buildTotalUpdateForPeriod(MONTH_PERIOD, SUM_TYPE, newMonthlyInstances, monthlySum))
+            .add(buildTotalUpdateForPeriod(DAY_PERIOD, COUNT_TYPE, newDailyInstances, dailyCount))
+            .add(buildTotalUpdateForPeriod(WEEK_PERIOD, COUNT_TYPE, newWeeklyInstances, weeklyCount))
+            .add(buildTotalUpdateForPeriod(MONTH_PERIOD, COUNT_TYPE, newMonthlyInstances, monthlyCount))
+            .add(buildTotalUpdateForPeriod(DAY_PERIOD, RATIO_TYPE, totalInstances, dailyRatio))
+            .add(buildTotalUpdateForPeriod(WEEK_PERIOD, RATIO_TYPE, totalInstances, weeklyRatio))
+            .add(buildTotalUpdateForPeriod(MONTH_PERIOD, RATIO_TYPE, totalInstances, monthlyRatio))
             .build();
 
         periodTotals.bulkWrite(increments, new BulkWriteOptions().ordered(false), (result, t) -> {
@@ -149,24 +145,16 @@ public class GeneralPeriodicTransactionsStorage {
             .forEach(document -> {
 
                 PeriodStats stats = new PeriodStats(
-                    document.getDouble(SUM_SQUARED_FIELD).floatValue(),
-                    document.getDouble(COUNT_FIELD).floatValue(),
-                    document.getDouble(COUNT_SQUARED_FIELD).floatValue(),
-                    document.getDouble(SUM_FIELD).floatValue(),
-                    document.getDouble(RATIO_FIELD).floatValue(),
-                    document.getDouble(RATIO_SQUARED_FIELD).floatValue(),
+                    document.getDouble(VALUE_SUM_FIELD).floatValue(),
+                    document.getDouble(VALUE_SQUARED_SUM_FIELD).floatValue(),
                     document.getLong(INSTANCES_FIELD)
                 );
 
                 String length = document.getString(LENGTH_FIELD);
+                String type = document.getString(TYPE_FIELD);
 
-                if (length.equals(DAY_PERIOD)) {
-                    generalStats.setDaily(stats);
-                } else if (length.equals(WEEK_PERIOD)) {
-                    generalStats.setWeekly(stats);
-                } else if (length.equals(MONTH_PERIOD)) {
-                    generalStats.setMonthly(stats);
-                }
+                generalStats.add(type, length, stats);
+
                 },
                 (result, t) -> {
                 if (t != null) {
@@ -310,14 +298,12 @@ public class GeneralPeriodicTransactionsStorage {
     private UpdateOneModel<Document> buildTotalUpdateForPeriod(
         String period,
         String type,
-        String field,
-        String squaredField,
         int newInstances,
         TotalIncrement inc) {
 
         Document increment = new Document(INSTANCES_FIELD, newInstances)
-            .append(field, inc.getValueIncrease())
-            .append(squaredField, inc.getValueIncreaseSquared());
+            .append(VALUE_SUM_FIELD, inc.getValueIncrease())
+            .append(VALUE_SQUARED_SUM_FIELD, inc.getValueIncreaseSquared());
 
         return new UpdateOneModel<>(
             and(eq(LENGTH_FIELD, period), eq(TYPE_FIELD, type)),

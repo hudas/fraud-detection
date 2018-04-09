@@ -1,35 +1,18 @@
 package org.ignas.frauddetection.transactionstatistics.domain;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class PeriodicGeneralStats {
 
-    private PeriodStats daily;
-    private PeriodStats weekly;
-    private PeriodStats monthly;
+    private Map<String, Map<String, PeriodStats>> statsMap = new HashMap<>();
 
-    public PeriodicGeneralStats() {
+    public void add(String type, String period, PeriodStats stats) {
+        statsMap.computeIfAbsent(type, it -> new HashMap<String, PeriodStats>())
+            .put(period, stats);
     }
 
-    public void setDaily(PeriodStats daily) {
-        this.daily = daily;
-    }
-
-    public void setWeekly(PeriodStats weekly) {
-        this.weekly = weekly;
-    }
-
-    public void setMonthly(PeriodStats monthly) {
-        this.monthly = monthly;
-    }
-
-    public PeriodStats getDaily() {
-        return daily;
-    }
-
-    public PeriodStats getWeekly() {
-        return weekly;
-    }
-
-    public PeriodStats getMonthly() {
-        return monthly;
+    public PeriodStats get(String type, String period) {
+        return statsMap.get(type).get(period);
     }
 }
