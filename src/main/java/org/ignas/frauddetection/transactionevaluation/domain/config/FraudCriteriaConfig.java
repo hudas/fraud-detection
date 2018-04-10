@@ -34,16 +34,13 @@ public class FraudCriteriaConfig {
     public FraudCriteriaConfig() {
         CRITERIA = ImmutableList.<NamedCriteria>builder()
             .addAll(defineAmountCriteria())
-            .addAll(defineExpectedAmountCriteria())
             .addAll(defineCountCriteria())
-            .addAll(defineExpectedCountCriteria())
             .addAll(defineAmountRatio())
             .add(defineMaxSpentAmount())
             .add(defineAmountCategory())
             .add(defineTimeRiskCriterion())
             .add(defineMinTimeBetweenTransactionsCriterion())
             .add(defineTimeBetweenTransactionsCriterion())
-            .add(defineExpectedTimeBetweenTransactionsCriterion())
             .add(defineLocationCriterion())
             .add(defineCommonDistanceCriterion())
             .add(defineLastTransactionDistanceCriterion())
@@ -160,29 +157,6 @@ public class FraudCriteriaConfig {
             .build();
     }
 
-    private static NamedCriteria defineExpectedTimeBetweenTransactionsCriterion() {
-        return new NamedCriteria.Builder<DeviationStatistics>("EXPECTED_TIME_BETWEEN_TRANSACTIONS", TIME_GROUP)
-            .calculator(new DeviationEvaluator())
-            .mapper((Transaction transaction, HistoricalData statistics) -> {
-                LocalDateTime previousTransactionTime = statistics.getDebtor()
-                    .getLastTransactionExecutionTime();
-
-                LocalDateTime executionTime = transaction.getTime();
-
-                Seconds timeBetween =
-                    Seconds.secondsBetween(previousTransactionTime, executionTime);
-
-                MeanStatistics<Seconds> time = statistics.getGlobal().getTimeDifference();
-
-                return new DeviationStatistics(
-                    timeBetween.getSeconds(),
-                    time.getExpected().getSeconds(),
-                    time.getDeviationExpected().getSeconds()
-                );
-            })
-            .build();
-    }
-
     private static NamedCriteria defineMinTimeBetweenTransactionsCriterion() {
         return new NamedCriteria.Builder<ComparableStatistics>("MIN_TIME_BETWEEN_TRANSACTIONS", TIME_GROUP)
             .calculator(comparableStatistics -> {
@@ -229,29 +203,6 @@ public class FraudCriteriaConfig {
 
     }
 
-    private static List<PeriodicCriteria<DeviationStatistics>> defineExpectedCountCriteria() {
-        return new PeriodicCriteria.Builder<DeviationStatistics>("EXPECTED_COUNT", COUNT_GROUP)
-            .period(Days.ONE, Days.SEVEN, Days.days(30))
-            .calculator(new DeviationEvaluator())
-            .mapper((Days period, Transaction transaction, HistoricalData statistics) -> {
-                int alreadyInitiatedTransactions = statistics.getDebtor()
-                    .getNumberOfTransactionsForPeriod(period);
-
-                // This single transaction we are evaluating is equal to 1
-                int totalTransactions = 1 + alreadyInitiatedTransactions;
-
-                MeanPeriodStatistics<Float> globalCountDetails = statistics.getGlobal()
-                    .countStatisticsForPeriod(period);
-
-                return new DeviationStatistics(
-                    totalTransactions,
-                    globalCountDetails.getExpected(),
-                    globalCountDetails.getDeviationExpected()
-                );
-            })
-            .build();
-    }
-
     private static List<PeriodicCriteria<DeviationStatistics>> defineAmountCriteria() {
         return new PeriodicCriteria.Builder<DeviationStatistics>("AVERAGE_SUM", AMOUNT_GROUP)
             .period(Days.ONE, Days.SEVEN, Days.days(30))
@@ -267,26 +218,6 @@ public class FraudCriteriaConfig {
                     totalPersonalExpenses,
                     globalSumDetails.getAverage(),
                     globalSumDetails.getDeviationAverage()
-                );
-            })
-            .build();
-    }
-
-    private static List<PeriodicCriteria<DeviationStatistics>> defineExpectedAmountCriteria() {
-        return new PeriodicCriteria.Builder<DeviationStatistics>("EXPECTED_SUM", AMOUNT_GROUP)
-            .period(Days.ONE, Days.SEVEN, Days.days(30))
-            .calculator(new DeviationEvaluator())
-            .mapper((Days period, Transaction transaction, HistoricalData statistics) -> {
-                float alreadySpent = statistics.getDebtor().getExpensesForPeriod(period);
-                float totalPersonalExpenses = alreadySpent + transaction.getAmount();
-
-                MeanPeriodStatistics<Float> globalSumDetails = statistics.getGlobal()
-                    .sumStatisticsForPeriod(period);
-
-                return new DeviationStatistics(
-                    totalPersonalExpenses,
-                    globalSumDetails.getExpected(),
-                    globalSumDetails.getDeviationExpected()
                 );
             })
             .build();

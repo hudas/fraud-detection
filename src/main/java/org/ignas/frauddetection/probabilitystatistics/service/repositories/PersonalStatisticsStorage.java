@@ -133,7 +133,7 @@ public class PersonalStatisticsStorage {
         });
     }
 
-    private ReplaceOneModel buildReplacementObject(PersonalStats newStats) {
+    private ReplaceOneModel<Document> buildReplacementObject(PersonalStats newStats) {
         PersonalTransactionStats latest = newStats.getLatestTransaction();
 
         Location latestLocation = latest.getLocation();

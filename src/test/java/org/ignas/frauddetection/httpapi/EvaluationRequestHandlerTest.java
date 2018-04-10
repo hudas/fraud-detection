@@ -40,7 +40,7 @@ class EvaluationRequestHandlerTest {
             logIntegration -> Future.succeededFuture()
         );
 
-        RoutingContext context = Mockito.mock(RoutingContext.class);
+        RoutingContext context = Mockito.mock(RoutingContextImpl.class);
         JsonObject emptyRequest = new JsonObject();
 
         when(context.getBodyAsJson()).thenReturn(emptyRequest);
@@ -52,20 +52,19 @@ class EvaluationRequestHandlerTest {
 
     @Test
     void returnsResultAsJson() {
-        Json.mapper.registerModule(new JodaModule());
-
         String testJson = "{\n" +
             "    \"transactionId\" : \"123\", " +
             "    \"debtorCreditCardId\" : \"1234\", " +
             "    \"debtorAccountId\": \"1235\", " +
             "    \"creditorAccountId\":\"1236\", " +
             "    \"amount\": 123.75, " +
-            "    \"time\": \"2018-02-24T14:51:36.1234+03:00\", " +
+            "    \"time\": \"2018-02-24T14:51:36.1234\", " +
             "    \"location\": { " +
             "        \"longtitude\" : \"54.312312\", " +
             "        \"latitude\" : \"25.312315\" " +
             "    } " +
             "}";
+
         EvaluationRequestHandler handler = new EvaluationRequestHandler(
             testIntegration -> Future.succeededFuture(1f),
             logIntegration -> Future.succeededFuture()
@@ -74,6 +73,7 @@ class EvaluationRequestHandlerTest {
         RoutingContext fakeContext = Mockito.mock(RoutingContext.class);
         HttpServerResponse fakeResponse = Mockito.mock(HttpServerResponse.class);
 
+        Json.mapper.registerModule(new JodaModule());
         JsonObject emptyRequest = new JsonObject(testJson);
 
         when(fakeContext.getBodyAsJson()).thenReturn(emptyRequest);

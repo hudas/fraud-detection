@@ -36,25 +36,25 @@ class StatisticsAPIConverterTest {
         new CredibilityScore(0.065f, 0.035f, 0.025f),
         new PublicStatistics(
             ImmutableList.of(
-                new SumStatistics(1, 8.23f, 0.23f, 8.00f, 0.33f),
-                new SumStatistics(7, 64.4f, 3.4f, 65.4f, 5.4f)
+                new SumStatistics(1, 8.23f, 0.23f),
+                new SumStatistics(7, 64.4f, 3.4f)
             ),
             ImmutableList.of(
                 new RatioStatistics(1, 0.8f, 0.05f),
                 new RatioStatistics(7, 0.1f, 0.15f)
             ),
             ImmutableList.of(
-                new CountStatistics(1, 1.2f, 0.2f, 1.5f, 0.3f),
-                new CountStatistics(7, 10.0f, 2f, 12f, 3f)
+                new CountStatistics(1, 1.2f, 0.2f),
+                new CountStatistics(7, 10.0f, 2f)
             ),
             ImmutableList.of(
-                new TimeDifferenceStatistics(1, 36000, 3600)
+                new TimeDifferenceStatistics(36000, 3600)
             ),
             ImmutableList.of(
-                new DistanceDifferenceStatistics(1, 0.24f, 0.03f)
+                new DistanceDifferenceStatistics(0.24f, 0.03f)
             ),
             ImmutableList.of(
-                new DistanceDifferenceStatistics(1, 0.12f, 0.85f)
+                new DistanceDifferenceStatistics(0.12f, 0.85f)
             )
         )
     );
@@ -128,38 +128,27 @@ class StatisticsAPIConverterTest {
         MeanPeriodStatistics<Float> sumForDay = data.getGlobal().sumStatisticsForPeriod(Days.ONE);
         assertEquals(8.23f, sumForDay.getAverage().floatValue());
         assertEquals(0.23f, sumForDay.getDeviationAverage().floatValue());
-        assertEquals(8.00f, sumForDay.getExpected().floatValue());
-        assertEquals(0.33f, sumForDay.getDeviationExpected().floatValue());
 
         MeanPeriodStatistics<Float> sumForWeek = data.getGlobal().sumStatisticsForPeriod(Days.days(7));
         assertEquals(64.4f, sumForWeek.getAverage().floatValue());
         assertEquals(3.4f, sumForWeek.getDeviationAverage().floatValue());
-        assertEquals(65.4f, sumForWeek.getExpected().floatValue());
-        assertEquals(5.4f, sumForWeek.getDeviationExpected().floatValue());
 
         MeanPeriodStatistics<Float> ratioForDay = data.getGlobal().ratioStatisticsForPeriod(Days.ONE);
         assertEquals(0.8f, ratioForDay.getAverage().floatValue());
         assertEquals(0.05f, ratioForDay.getDeviationAverage().floatValue());
-        assertNull(ratioForDay.getExpected());
-        assertNull(ratioForDay.getDeviationExpected());
 
         MeanPeriodStatistics<Float> ratioForWeek = data.getGlobal().ratioStatisticsForPeriod(Days.days(7));
         assertEquals(0.1f, ratioForWeek.getAverage().floatValue());
         assertEquals(0.15f, ratioForWeek.getDeviationAverage().floatValue());
-        assertNull(ratioForWeek.getExpected());
-        assertNull(ratioForWeek.getDeviationExpected());
 
         MeanPeriodStatistics<Float> countForDay = data.getGlobal().countStatisticsForPeriod(Days.ONE);
         assertEquals(1.2f, countForDay.getAverage().floatValue());
         assertEquals(0.2f, countForDay.getDeviationAverage().floatValue());
-        assertEquals(1.5f, countForDay.getExpected().floatValue());
-        assertEquals(0.3f, countForDay.getDeviationExpected().floatValue());
+
 
         MeanPeriodStatistics<Float> countForWeek = data.getGlobal().countStatisticsForPeriod(Days.days(7));
         assertEquals(10.0f, countForWeek.getAverage().floatValue());
         assertEquals(2.0f, countForWeek.getDeviationAverage().floatValue());
-        assertEquals(12.0f, countForWeek.getExpected().floatValue());
-        assertEquals(3.0f, countForWeek.getDeviationExpected().floatValue());
     }
 
     @Test
@@ -169,20 +158,15 @@ class StatisticsAPIConverterTest {
         MeanStatistics<Float> commonDistance = data.getGlobal().getDistanceToCommonLocation();
         assertEquals(0.24f, commonDistance.getAverage().floatValue());
         assertEquals(0.03f, commonDistance.getDeviationAverage().floatValue());
-        assertNull(commonDistance.getExpected());
-        assertNull(commonDistance.getDeviationExpected());
 
         MeanStatistics<Float> lastLocation = data.getGlobal().getDistanceToLastLocation();
         assertEquals(0.12f, lastLocation.getAverage().floatValue());
         assertEquals(0.85f, lastLocation.getDeviationAverage().floatValue());
-        assertNull(lastLocation.getExpected());
-        assertNull(lastLocation.getDeviationExpected());
+
 
         MeanStatistics<Seconds> timeDiff = data.getGlobal().getTimeDifference();
         assertEquals(Seconds.seconds(36000), timeDiff.getAverage());
         assertEquals(Seconds.seconds(3600), timeDiff.getDeviationAverage());
-        assertEquals(Seconds.seconds(36600), timeDiff.getExpected());
-        assertEquals(Seconds.seconds(3300), timeDiff.getDeviationExpected());
     }
 
 

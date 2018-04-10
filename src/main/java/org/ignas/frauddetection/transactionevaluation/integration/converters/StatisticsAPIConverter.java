@@ -20,7 +20,9 @@ import org.joda.time.Seconds;
 
 import java.util.List;
 
+import static java.lang.Math.round;
 import static java.util.stream.Collectors.toList;
+import static org.joda.time.Seconds.seconds;
 
 public class StatisticsAPIConverter {
 
@@ -69,7 +71,7 @@ public class StatisticsAPIConverter {
             statistics.getDebtorStatistics().getLastTransactionLocation(),
             statistics.getDebtorStatistics().getMostValuableTransaction(),
             statistics.getDebtorStatistics().getLastTransactionExecutionTime(),
-            Seconds.seconds(statistics.getDebtorStatistics().getMinTimeBetweenTransactions()),
+            seconds(statistics.getDebtorStatistics().getMinTimeBetweenTransactions()),
             statistics.getDebtorStatistics().getPeriodicStatistics().stream()
                 .map(StatisticsAPIConverter::personalPeriodFromDTO)
                 .collect(toList())
@@ -131,8 +133,7 @@ public class StatisticsAPIConverter {
             .orElseThrow(IllegalStateException::new);
 
         return MeanStatistics.<Seconds>builder()
-            .expectedValues(Seconds.seconds(stats.getExpected()), Seconds.seconds(stats.getDeviationExpected()))
-            .pastValues(Seconds.seconds(stats.getAverage()), Seconds.seconds(stats.getDeviationAverage()))
+            .pastValues(seconds(round(stats.getAverage())), seconds(round(stats.getDeviationAverage())))
             .build();
     }
 
@@ -152,7 +153,6 @@ public class StatisticsAPIConverter {
             .getCount()
             .stream()
             .map(sumStatistics -> MeanPeriodStatistics.<Float>builder(Days.days(sumStatistics.getPeriodLength()))
-                .expectedValues(sumStatistics.getExpected(), sumStatistics.getDeviationExpected())
                 .pastValues(sumStatistics.getAverage(), sumStatistics.getDeviationAverage())
                 .build()
             )
@@ -164,7 +164,6 @@ public class StatisticsAPIConverter {
             .getSum()
             .stream()
             .map(sumStatistics -> MeanPeriodStatistics.<Float>builder(Days.days(sumStatistics.getPeriodLength()))
-                .expectedValues(sumStatistics.getExpected(), sumStatistics.getDeviationExpected())
                 .pastValues(sumStatistics.getAverage(), sumStatistics.getDeviationAverage())
                 .build()
             )

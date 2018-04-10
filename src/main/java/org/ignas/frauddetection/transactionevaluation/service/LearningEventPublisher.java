@@ -1,6 +1,7 @@
 package org.ignas.frauddetection.transactionevaluation.service;
 
 import org.ignas.frauddetection.shared.OneWayServiceIntegration;
+import org.ignas.frauddetection.transactionevaluation.api.request.BehaviourData;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
 import org.ignas.frauddetection.transactionevaluation.api.request.TransactionData;
 import org.ignas.frauddetection.transactionevaluation.domain.Risk;
@@ -37,6 +38,7 @@ public class LearningEventPublisher {
             new LearningRequest(
                 false,
                 requestData,
+                new BehaviourData(0, 0, 0,0, 0, 0),
                 groupedCriteriaValues,
                 groupValueRepresentations
             )

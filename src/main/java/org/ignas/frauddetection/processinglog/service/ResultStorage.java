@@ -8,6 +8,7 @@ import io.vertx.core.Future;
 import org.bson.Document;
 import org.ignas.frauddetection.probabilitystatistics.domain.CombinationStatistics;
 import org.ignas.frauddetection.shared.Location;
+import org.ignas.frauddetection.transactionevaluation.api.request.BehaviourData;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
 import org.ignas.frauddetection.transactionevaluation.api.request.TransactionData;
 import org.joda.time.LocalDateTime;
@@ -149,6 +150,7 @@ public class ResultStorage {
         return new LearningRequest(
             false,
             data,
+            null,
             groupedCriteriaValues,
             groupValues
         );

@@ -26,7 +26,7 @@ ext {
     mockitoVersion = '2.16.0'
     junitVersion = '5.1.0'
 
-    jodaMapperVersion = '2.7.4'
+    jodaMapperVersion = '2.9.0'
     jdk8MapperVersion = '2.4.0'
 
     mongoDriverVersion = '3.6.3'
@@ -67,4 +67,5 @@ dependencies {
     testCompile "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
     testCompile "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
     testCompile "org.mockito:mockito-core:${mockitoVersion}"
+    testCompile "com.fasterxml.jackson.datatype:jackson-datatype-joda:${jodaMapperVersion}"
 }

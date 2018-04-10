@@ -10,6 +10,7 @@ import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionstatistics.domain.ConditionOccurrences;
 import org.ignas.frauddetection.transactionstatistics.repositories.ConditionStorage;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,7 +39,7 @@ public class ExternalConditionUpdater extends AbstractVerticle {
 
             BatchToProcess batch = (BatchToProcess) batchEvent.body();
 
-            Map<String, ConditionOccurrences> creditorOccurrences = new HashMap<>();
+            Map<String, ConditionOccurrences<String>> creditorOccurrences = new HashMap<>();
 
             batch.getItems().forEach(item -> {
                 ConditionOccurrences<String> creditor = creditorOccurrences.computeIfAbsent(
@@ -50,19 +51,19 @@ public class ExternalConditionUpdater extends AbstractVerticle {
                 creditor.increaseOccurrences(nonFraudIncrement, fraudIncrement);
             });
 
-            Map<Integer, ConditionOccurrences> timeOccurrences = new HashMap<>();
+            Map<Integer, ConditionOccurrences<Integer>> timeOccurrences = new HashMap<>();
 
             batch.getItems().forEach(item -> {
-                ConditionOccurrences<String> creditor = timeOccurrences.computeIfAbsent(
+                ConditionOccurrences<Integer> time = timeOccurrences.computeIfAbsent(
                     item.getTransaction().getTime().getHourOfDay(), ConditionOccurrences::empty);
 
                 int nonFraudIncrement = !item.isAlreadyProcessedTransaction() ? 1 : 0;
                 int fraudIncrement = item.isFraudulent() ? 1 : 0;
 
-                creditor.increaseOccurrences(nonFraudIncrement, fraudIncrement);
+                time.increaseOccurrences(nonFraudIncrement, fraudIncrement);
             });
 
-            Map<Location, ConditionOccurrences> locationOccurrences = new HashMap<>();
+            Map<Location, ConditionOccurrences<Location>> locationOccurrences = new HashMap<>();
 
             batch.getItems().forEach(item -> {
                 ConditionOccurrences<Location> creditor = locationOccurrences.<Location>computeIfAbsent(
@@ -75,9 +76,9 @@ public class ExternalConditionUpdater extends AbstractVerticle {
             });
 
             conditionStorage.updateOccurrences(
-                newArrayList(creditorOccurrences.values()),
-                newArrayList(timeOccurrences.values()),
-                newArrayList(locationOccurrences.values())
+                new ArrayList<ConditionOccurrences<String>>(creditorOccurrences.values()),
+                new ArrayList<ConditionOccurrences<Integer>>(timeOccurrences.values()),
+                new ArrayList<ConditionOccurrences<Location>>(locationOccurrences.values())
             );
 
             // Resend same event without any modifications

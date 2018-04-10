@@ -1,5 +1,8 @@
 package org.ignas.frauddetection.httpapi.request;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.deser.std.DateDeserializers;
+import com.fasterxml.jackson.datatype.joda.deser.DateTimeDeserializer;
 import org.ignas.frauddetection.shared.Location;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDateTime;
