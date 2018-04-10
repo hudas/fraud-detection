@@ -1,21 +1,25 @@
 package org.ignas.frauddetection.transactionstatistics;
 
+import com.google.common.collect.Lists;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
-import org.ignas.frauddetection.probabilitystatistics.service.repositories.GeneralProbabilitiesStorage;
+import org.ignas.frauddetection.probabilitystatistics.domain.PersonalStats;
+import org.ignas.frauddetection.probabilitystatistics.service.repositories.PersonalStatisticsStorage;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class PersonalStatisticsUpdater extends AbstractVerticle {
 
-    private GeneralProbabilitiesStorage probabilitiesStorage;
+    private PersonalStatisticsStorage personalStatistics;
 
     public PersonalStatisticsUpdater() {
-        probabilitiesStorage = new GeneralProbabilitiesStorage(
+        personalStatistics = new PersonalStatisticsStorage(
             "mongodb://localhost",
-            "transactions",
-            "personalStatistics"
+            "transactions"
         );
     }
 
@@ -30,19 +34,17 @@ public class PersonalStatisticsUpdater extends AbstractVerticle {
 
             BatchToProcess batch = (BatchToProcess) batchPrepared.body();
 
-//            int newTransactions = (int) batch.getItems()
-//                .stream()
-//                .filter(request -> !request.isAlreadyProcessedTransaction())
-//                .count();
-//
-//            int newFraudulentTransactions = (int) batch.getItems()
-//                .stream()
-//                .filter(LearningRequest::isFraudulent)
-//                .count();
-//
-//            probabilitiesStorage.persist(newTransactions, newFraudulentTransactions);
+            Map<String, PersonalStats> updates = new HashMap<>();
 
-            // Resend same event without any modifications
+            // Batch transactions for single debtor
+            for (LearningRequest request : batch.getItems()) {
+                updates.computeIfAbsent(
+                    request.getTransaction().getDebtorId(),
+                    PersonalStats::new
+                ).updateFrom(request);
+            }
+
+            personalStatistics.update(Lists.newArrayList(updates.values()));
 
             bus.publish("transaction-processing.personal-data-updated", batch);
         });

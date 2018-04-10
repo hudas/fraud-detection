@@ -16,6 +16,15 @@ public class Location {
         this.longtitude = longtitude;
     }
 
+    public static Location fromShortCode(String code) {
+        String[] coordinates = code.split(",");
+
+        float latitude = Float.parseFloat(coordinates[0].trim());
+        float longtitude = Float.parseFloat(coordinates[1].trim());
+
+        return new Location(latitude, longtitude);
+    }
+
     /**
      * Calculates euler distance in degrees
      * @param to

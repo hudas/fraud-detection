@@ -5,6 +5,8 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
+import org.ignas.frauddetection.probabilitystatistics.domain.PersonalStats;
+import org.ignas.frauddetection.probabilitystatistics.service.repositories.PersonalStatisticsStorage;
 import org.ignas.frauddetection.shared.ImmutableObjectCodec;
 import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionstatistics.api.request.StatisticsRequest;
@@ -16,6 +18,12 @@ import org.ignas.frauddetection.transactionstatistics.repositories.GeneralPeriod
 import org.ignas.frauddetection.transactionstatistics.repositories.GeneralTransactionsStorage;
 import org.joda.time.LocalDateTime;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 import static com.google.common.collect.Lists.newArrayList;
 import static org.ignas.frauddetection.transactionstatistics.repositories.GeneralPeriodicTransactionsStorage.*;
 
@@ -23,6 +31,7 @@ public class TransactionStatisticArchive extends AbstractVerticle {
 
     private GeneralTransactionsStorage generalTransactionsStorage;
     private GeneralPeriodicTransactionsStorage generalPeriodicTransactionsStorage;
+    private PersonalStatisticsStorage personalStatistics;
 
     private ConditionStorage conditionStorage;
 
@@ -33,6 +42,10 @@ public class TransactionStatisticArchive extends AbstractVerticle {
             "transactions"
         );
         generalPeriodicTransactionsStorage = new GeneralPeriodicTransactionsStorage(
+            "mongodb://localhost",
+            "transactions"
+        );
+        personalStatistics = new PersonalStatisticsStorage(
             "mongodb://localhost",
             "transactions"
         );
@@ -64,7 +77,9 @@ public class TransactionStatisticArchive extends AbstractVerticle {
 
                 Future<PeriodicGeneralStats> periodicLoader = generalPeriodicTransactionsStorage.fetchPeriodicStats();
 
-                CompositeFuture.all(conditionsLoader, statsLoader, periodicLoader).setHandler(
+                Future<PersonalStats> personalLoader = personalStatistics.fetchPersonalStats(request.getRequestByDebtorId());
+
+                CompositeFuture.all(conditionsLoader, statsLoader, periodicLoader, personalLoader).setHandler(
                     event -> {
                         if (event.failed()) {
                             event.cause().printStackTrace();
@@ -74,6 +89,7 @@ public class TransactionStatisticArchive extends AbstractVerticle {
                         ExternalConditions conditions = event.result().resultAt(0);
                         NonPeriodicGeneralStats nonPeriodicStats = event.result().resultAt(1);
                         PeriodicGeneralStats periodicStats = event.result().resultAt(2);
+                        PersonalStats personalStats = event.result().resultAt(3);
 
                         CredibilityScore creditorScore = buildScore(conditions.getCreditor());
                         CredibilityScore timeScore = buildScore(conditions.getTime());
@@ -95,19 +111,10 @@ public class TransactionStatisticArchive extends AbstractVerticle {
                         RatioStatistics weeklyRatio = buildRatioStatsForPeriod(periodicStats.get(RATIO_TYPE, WEEK_PERIOD), 7);
                         RatioStatistics monthlyRatio = buildRatioStatsForPeriod(periodicStats.get(RATIO_TYPE, MONTH_PERIOD), 30);
 
+                        DebtorTransactionStatistics debtorStats = buildDebtorStats(personalStats);
+
                         Statistics result = new Statistics(
-                            new DebtorTransactionStatistics(
-                                new Location(54.25123f, 25.45211f),
-                                new Location(54.25123f, 25.45211f),
-                                10f,
-                                LocalDateTime.now().minusHours(1),
-                                3600,
-                                ImmutableList.of(
-                                    new PersonalPeriod(1,1f,2),
-                                    new PersonalPeriod(7,110f,4),
-                                    new PersonalPeriod(30,550f,22)
-                                )
-                            ),
+                            debtorStats,
                             creditorScore,
                             timeScore,
                             locationScore,
@@ -125,6 +132,43 @@ public class TransactionStatisticArchive extends AbstractVerticle {
                     }
                 );
             });
+    }
+
+    private DebtorTransactionStatistics buildDebtorStats(PersonalStats personalStats) {
+        Location latestLocation = personalStats.getLatestTransaction().getLocation();
+
+        Optional<Map.Entry<String, Long>> mostUsedLocation = personalStats.getLocationOccurences()
+            .entrySet()
+            .stream()
+            .max(Comparator.comparingLong(Map.Entry::getValue));
+
+        Location commonLocation;
+
+        if (mostUsedLocation.isPresent()) {
+            commonLocation = Location.fromShortCode(mostUsedLocation.get().getKey());
+        } else {
+            commonLocation = latestLocation;
+        }
+
+        Float mostValuableTransaction = personalStats.getMaxAmount();
+        Long minTimeBetween = personalStats.getMinTimeDiff();
+
+        LocalDateTime lastTransactionTime = personalStats.getLatestTransaction().getTime();
+
+        List<PersonalPeriod> periods = personalStats.getPeriods()
+            .values()
+            .stream()
+            .map(it -> new PersonalPeriod(it.getLength(), it.getSum(), it.getCount()))
+            .collect(Collectors.toList());
+
+        return new DebtorTransactionStatistics(
+            commonLocation,
+            latestLocation,
+            mostValuableTransaction,
+            lastTransactionTime,
+            minTimeBetween.intValue(),
+            periods
+        );
     }
 
     private CredibilityScore buildScore(ConditionStats<?> creditor) {
