@@ -1,9 +1,7 @@
 package org.ignas.frauddetection.transactionevaluation.domain.calculation.criteria;
 
 import org.ignas.frauddetection.transactionevaluation.domain.Transaction;
-import org.ignas.frauddetection.transactionevaluation.domain.calculation.Evaluator;
-import org.ignas.frauddetection.transactionevaluation.domain.calculation.MappableToOperation;
-import org.ignas.frauddetection.transactionevaluation.domain.calculation.PrintableResult;
+import org.ignas.frauddetection.transactionevaluation.domain.calculation.*;
 import org.ignas.frauddetection.transactionevaluation.domain.stats.DebtorStatistics;
 import org.ignas.frauddetection.transactionevaluation.domain.stats.EnvironmentStatistics;
 import org.ignas.frauddetection.transactionevaluation.domain.stats.GlobalStatistics;
@@ -32,8 +30,9 @@ public class NamedCriteria<T> implements Criteria {
         return group;
     }
 
-    public PrintableResult evaluate(Transaction transaction, HistoricalData stats) {
-        return calculator.evaluate(mapper.transform(transaction, stats));
+    public EvaluationResult evaluate(Transaction transaction, HistoricalData stats) {
+        MapperResult<T> result = mapper.transform(transaction, stats);
+        return new EvaluationResult(calculator.evaluate(result.getOperationInput()), result.getBehaviourData());
     }
 
     // TODO: Could be refactored into common factory

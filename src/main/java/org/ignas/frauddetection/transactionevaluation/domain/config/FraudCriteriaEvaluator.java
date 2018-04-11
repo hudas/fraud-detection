@@ -1,6 +1,7 @@
 package org.ignas.frauddetection.transactionevaluation.domain.config;
 
 import org.ignas.frauddetection.transactionevaluation.domain.Transaction;
+import org.ignas.frauddetection.transactionevaluation.domain.calculation.EvaluationResult;
 import org.ignas.frauddetection.transactionevaluation.domain.calculation.PrintableResult;
 import org.ignas.frauddetection.transactionevaluation.domain.calculation.criteria.NamedCriteria;
 import org.ignas.frauddetection.transactionevaluation.domain.stats.HistoricalData;
@@ -30,16 +31,16 @@ public class FraudCriteriaEvaluator {
 
     }
 
-    public Map<String, String> evaluateAll(Transaction transactionData, HistoricalData data) {
+    public Map<String, EvaluationResult> evaluateAll(Transaction transactionData, HistoricalData data) {
         return criteriaConfig.definedCriteria()
             .stream()
             .collect(toMap(
                 NamedCriteria::name,
-                it -> it.evaluate(transactionData, data).representation())
+                it -> it.evaluate(transactionData, data))
             );
     }
 
-    public PrintableResult evaluate(String criteria, Transaction transactionData, HistoricalData data) {
+    public EvaluationResult evaluate(String criteria, Transaction transactionData, HistoricalData data) {
         return criteriaConfig.definedCriteria()
             .stream()
             .filter(defined -> defined.name().equals(criteria))

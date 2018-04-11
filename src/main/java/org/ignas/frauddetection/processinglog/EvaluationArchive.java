@@ -1,17 +1,9 @@
 package org.ignas.frauddetection.processinglog;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.processinglog.service.ResultStorage;
-import org.ignas.frauddetection.shared.ImmutableObjectCodec;
-import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
-import org.ignas.frauddetection.transactionstatistics.api.request.StatisticsRequest;
-import org.ignas.frauddetection.transactionstatistics.api.response.*;
-import org.ignas.frauddetection.transactionstatistics.api.response.generalindicators.*;
-import org.joda.time.LocalDateTime;
 
 public class EvaluationArchive extends AbstractVerticle {
 

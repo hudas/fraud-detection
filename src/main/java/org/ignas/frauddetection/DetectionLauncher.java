@@ -12,7 +12,7 @@ import org.ignas.frauddetection.probabilitystatistics.*;
 import org.ignas.frauddetection.processinglog.EvaluationArchive;
 import org.ignas.frauddetection.resultsanalyser.ResultsAnalyser;
 import org.ignas.frauddetection.transactionevaluation.EvaluationController;
-import org.ignas.frauddetection.transactionstatistics.TransactionStatisticArchive;
+import org.ignas.frauddetection.transactionstatistics.*;
 
 /**
  * Custom fraud detection cluster launcher
@@ -45,6 +45,12 @@ public class DetectionLauncher implements VertxLifecycleHooks {
             .add(new GeneralDataUpdater())
             .add(new CriteriaStatisticsUpdater())
             .add(new EvaluationArchive())
+            .add(new ExternalConditionUpdater())
+            .add(new TransactionStatisticsProcessor())
+            .add(new PublicStatisticsUpdater())
+            .add(new PublicPeriodicStatisticsUpdater())
+            .add(new PersonalStatisticsUpdater())
+
             .build();
 
         workers.forEach(it -> vertx.deployVerticle(it, workerDeployment));

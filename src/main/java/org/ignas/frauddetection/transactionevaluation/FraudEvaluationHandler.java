@@ -7,16 +7,19 @@ import org.apache.http.HttpStatus;
 import org.ignas.frauddetection.probabilitystatistics.api.response.ProbabilityStatistics;
 import org.ignas.frauddetection.shared.OneWayServiceIntegration;
 import org.ignas.frauddetection.shared.ServiceIntegration;
+import org.ignas.frauddetection.transactionevaluation.api.request.BehaviourData;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
 import org.ignas.frauddetection.transactionevaluation.api.request.TransactionData;
 import org.ignas.frauddetection.transactionevaluation.cache.GroupProbabilityCache;
 import org.ignas.frauddetection.transactionevaluation.domain.Risk;
 import org.ignas.frauddetection.transactionevaluation.domain.Transaction;
+import org.ignas.frauddetection.transactionevaluation.domain.calculation.EvaluationResult;
 import org.ignas.frauddetection.transactionevaluation.domain.config.FraudCriteriaEvaluator;
 import org.ignas.frauddetection.transactionevaluation.domain.stats.HistoricalData;
 import org.ignas.frauddetection.transactionevaluation.service.GroupRiskEvaluator;
 import org.ignas.frauddetection.transactionevaluation.service.LearningEventPublisher;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class FraudEvaluationHandler implements Handler<Message<Object>> {
@@ -59,8 +62,19 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
                     throw new IllegalStateException(historyLoaded.cause());
                 }
 
-                Map<String, String> criteriaValues =
+                Map<String, EvaluationResult> evaluationResult =
                     criteriaEvaluator.evaluateAll(transactionData, historyLoaded.result());
+
+                Map<String, String> criteriaValues = new HashMap<>();
+                evaluationResult.forEach((key, value) -> criteriaValues.put(key, value.getResult().representation()));
+
+                EvaluationResult dailyRatioResult = evaluationResult.get("AVERAGE_PERIOD_AMOUNT_RATIO/P1");
+                EvaluationResult weeklyRatioResult = evaluationResult.get("AVERAGE_PERIOD_AMOUNT_RATIO/P7");
+                EvaluationResult monthlyRatioResult = evaluationResult.get("AVERAGE_PERIOD_AMOUNT_RATIO/P30");
+
+                EvaluationResult distanceFromCommon = evaluationResult.get("AVERAGE_DISTANCE_FROM_COMMON_LOCATION");
+                EvaluationResult distanceFromLast = evaluationResult.get("AVERAGE_DISTANCE_FROM_LAST_LOCATION");
+                EvaluationResult timeToLast = evaluationResult.get("MIN_TIME_BETWEEN_TRANSACTIONS");
 
                 Future<ProbabilityStatistics> probabilityStatistics = probabilityStatisticsIntegration.load(criteriaValues);
 
@@ -78,7 +92,15 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
 
                     event.reply(fraudProbability);
 
-                    learningInitiator.publishData(requestData, criteriaValues, groupValues);
+                    BehaviourData behaviour = new BehaviourData(
+                        dailyRatioResult.getRawResult(),
+                        weeklyRatioResult.getRawResult(),
+                        monthlyRatioResult.getRawResult(),
+                        Math.round(timeToLast.getRawResult()),
+                        distanceFromLast.getRawResult(),
+                        distanceFromCommon.getRawResult()
+                    );
+                    learningInitiator.publishData(requestData, behaviour, criteriaValues, groupValues);
                 });
             });
     }

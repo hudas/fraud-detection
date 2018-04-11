@@ -8,5 +8,5 @@ import org.ignas.frauddetection.transactionevaluation.domain.stats.HistoricalDat
 import org.joda.time.Days;
 
 public interface MappableToPeriodicOperation<T> {
-    T transform(Days period, Transaction transaction, HistoricalData statistics);
+    MapperResult<T> transform(Days period, Transaction transaction, HistoricalData statistics);
 }

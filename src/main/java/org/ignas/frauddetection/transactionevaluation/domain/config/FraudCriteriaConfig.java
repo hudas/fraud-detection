@@ -1,8 +1,10 @@
 package org.ignas.frauddetection.transactionevaluation.domain.config;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.commons.lang3.tuple.Pair;
 import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionevaluation.domain.Transaction;
+import org.ignas.frauddetection.transactionevaluation.domain.calculation.MapperResult;
 import org.ignas.frauddetection.transactionevaluation.domain.calculation.criteria.NamedCriteria;
 import org.ignas.frauddetection.transactionevaluation.domain.calculation.criteria.PeriodicCriteria;
 import org.ignas.frauddetection.transactionevaluation.domain.calculation.evaluators.ComparableStatistics;
@@ -58,11 +60,11 @@ public class FraudCriteriaConfig {
             .mapper((Transaction transaction, HistoricalData statistics) -> {
                 FraudRate creditor = statistics.getEnvironment().getCreditor();
 
-                return new DeviationStatistics(
+                return MapperResult.withoutBehaviour(new DeviationStatistics(
                     creditor.getFraudRate(),
                     creditor.getFraudRateAverage(),
                     creditor.getFraudRateDeviation()
-                );
+                ));
             })
             .build();
     }
@@ -73,11 +75,11 @@ public class FraudCriteriaConfig {
             .mapper((Transaction transaction, HistoricalData statistics) -> {
                 FraudRate location = statistics.getEnvironment().getLocation();
 
-                return new DeviationStatistics(
+                return MapperResult.withoutBehaviour(new DeviationStatistics(
                     location.getFraudRate(),
                     location.getFraudRateAverage(),
                     location.getFraudRateDeviation()
-                );
+                ));
             })
             .build();
     }
@@ -91,10 +93,13 @@ public class FraudCriteriaConfig {
                 float distanceDegrees = (float) transactionLocation
                     .distanceTo(statistics.getDebtor().getMostUsedLocation());
 
-                return new DeviationStatistics(
-                    distanceDegrees,
-                    statistics.getGlobal().getDistanceToCommonLocation().getAverage(),
-                    statistics.getGlobal().getDistanceToCommonLocation().getDeviationAverage()
+                return new MapperResult<>(
+                    new DeviationStatistics(
+                        distanceDegrees,
+                        statistics.getGlobal().getDistanceToCommonLocation().getAverage(),
+                        statistics.getGlobal().getDistanceToCommonLocation().getDeviationAverage()
+                    ),
+                    distanceDegrees
                 );
             })
             .build();
@@ -110,10 +115,13 @@ public class FraudCriteriaConfig {
                 float distanceDegrees = (float) transactionLocation
                     .distanceTo(previousLocation);
 
-                return new DeviationStatistics(
-                    distanceDegrees,
-                    statistics.getGlobal().getDistanceToLastLocation().getAverage(),
-                    statistics.getGlobal().getDistanceToLastLocation().getDeviationAverage()
+                return new MapperResult<>(
+                    new DeviationStatistics(
+                        distanceDegrees,
+                        statistics.getGlobal().getDistanceToLastLocation().getAverage(),
+                        statistics.getGlobal().getDistanceToLastLocation().getDeviationAverage()
+                    ),
+                    distanceDegrees
                 );
             })
             .build();
@@ -125,11 +133,11 @@ public class FraudCriteriaConfig {
             .mapper((Transaction transaction, HistoricalData statistics) -> {
                 FraudRate time = statistics.getEnvironment().getTime();
 
-                return new DeviationStatistics(
+                return MapperResult.withoutBehaviour(new DeviationStatistics(
                     time.getFraudRate(),
                     time.getFraudRateAverage(),
                     time.getFraudRateDeviation()
-                );
+                ));
             })
             .build();
     }
@@ -148,10 +156,12 @@ public class FraudCriteriaConfig {
 
                 MeanStatistics<Seconds> time = statistics.getGlobal().getTimeDifference();
 
-                return new DeviationStatistics(
-                    timeBetween.getSeconds(),
-                    time.getAverage().getSeconds(),
-                    time.getDeviationAverage().getSeconds()
+                return MapperResult.withoutBehaviour(
+                    new DeviationStatistics(
+                        timeBetween.getSeconds(),
+                        time.getAverage().getSeconds(),
+                        time.getDeviationAverage().getSeconds()
+                    )
                 );
             })
             .build();
@@ -171,9 +181,12 @@ public class FraudCriteriaConfig {
 
                 Seconds shortestPreviousTime = statistics.getDebtor().getShortestTimeBetweenTransactions();
 
-                return new ComparableStatistics(
-                    timeBetween.getSeconds(),
-                    shortestPreviousTime.getSeconds()
+                return new MapperResult(
+                    new ComparableStatistics(
+                        timeBetween.getSeconds(),
+                        shortestPreviousTime.getSeconds()
+                    ),
+                    Float.valueOf(timeBetween.getSeconds())
                 );
             })
             .build();
@@ -193,11 +206,11 @@ public class FraudCriteriaConfig {
                 MeanPeriodStatistics<Float> globalCountDetails = statistics.getGlobal()
                     .countStatisticsForPeriod(period);
 
-                return new DeviationStatistics(
+                return MapperResult.withoutBehaviour(new DeviationStatistics(
                     totalTransactions,
                     globalCountDetails.getAverage(),
                     globalCountDetails.getDeviationAverage()
-                );
+                ));
             })
             .build();
 
@@ -214,11 +227,11 @@ public class FraudCriteriaConfig {
                 MeanPeriodStatistics<Float> globalSumDetails = statistics.getGlobal()
                     .sumStatisticsForPeriod(period);
 
-                return new DeviationStatistics(
+                return MapperResult.<DeviationStatistics>withoutBehaviour(new DeviationStatistics(
                     totalPersonalExpenses,
                     globalSumDetails.getAverage(),
                     globalSumDetails.getDeviationAverage()
-                );
+                ));
             })
             .build();
     }
@@ -235,11 +248,12 @@ public class FraudCriteriaConfig {
                 MeanPeriodStatistics<Float> globalRatioDetails = statistics.getGlobal()
                     .ratioStatisticsForPeriod(period);
 
-                return new DeviationStatistics(
+                return new MapperResult(new DeviationStatistics(
                     amountRatio,
                     globalRatioDetails.getAverage(),
                     globalRatioDetails.getDeviationAverage()
-                );
+                ), amountRatio);
+
             })
             .build();
     }
@@ -255,10 +269,10 @@ public class FraudCriteriaConfig {
             .mapper((Transaction transaction, HistoricalData statistics) -> {
                 float mostValuableTransaction = statistics.getDebtor().getMostValuableTransaction();
 
-                return new ComparableStatistics(
+                return MapperResult.withoutBehaviour(new ComparableStatistics(
                     transaction.getAmount(),
                     mostValuableTransaction
-                );
+                ));
             })
             .build();
     }
@@ -270,7 +284,9 @@ public class FraudCriteriaConfig {
                 .filter(category -> category.abstracts(transaction.getAmount()))
                 .findAny()
                 .orElseThrow(IllegalStateException::new))
-            .mapper((Transaction transaction, HistoricalData statistics) -> transaction)
+            .mapper((Transaction transaction, HistoricalData statistics) ->
+                MapperResult.<Transaction>withoutBehaviour(transaction)
+            )
             .build();
     }
 }

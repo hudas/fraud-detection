@@ -8,19 +8,19 @@ public class BehaviourData {
 
     private float sumRatioMonthly;
 
-    private long timeDifferenceFromLast;
+    private float timeDifferenceFromLast;
 
-    private long distanceFromLast;
+    private float distanceFromLast;
 
-    private long distanceFromCommon;
+    private float distanceFromCommon;
 
     public BehaviourData(
         float sumRatioDaily,
         float sumRatioWeekly,
         float sumRatioMonthly,
-        long timeDifferenceFromLast,
-        long distanceFromLast,
-        long distanceFromCommon) {
+        float timeDifferenceFromLast,
+        float distanceFromLast,
+        float distanceFromCommon) {
 
         this.sumRatioDaily = sumRatioDaily;
         this.sumRatioWeekly = sumRatioWeekly;
@@ -42,15 +42,15 @@ public class BehaviourData {
         return sumRatioMonthly;
     }
 
-    public long getTimeDifferenceFromLast() {
+    public float getTimeDifferenceFromLast() {
         return timeDifferenceFromLast;
     }
 
-    public long getDistanceFromLast() {
+    public float getDistanceFromLast() {
         return distanceFromLast;
     }
 
-    public long getDistanceFromCommon() {
+    public float getDistanceFromCommon() {
         return distanceFromCommon;
     }
 }

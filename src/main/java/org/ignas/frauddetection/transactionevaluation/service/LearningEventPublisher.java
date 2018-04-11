@@ -27,6 +27,7 @@ public class LearningEventPublisher {
 
     public void publishData(
         TransactionData requestData,
+        BehaviourData behaviour,
         Map<String, String> criteriaValues,
         Map<String, Risk.Value> groupValues) {
 
@@ -38,7 +39,7 @@ public class LearningEventPublisher {
             new LearningRequest(
                 false,
                 requestData,
-                new BehaviourData(0, 0, 0,0, 0, 0),
+                behaviour,
                 groupedCriteriaValues,
                 groupValueRepresentations
             )
