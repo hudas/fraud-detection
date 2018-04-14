@@ -5,7 +5,7 @@ public class EvaluationResult {
     private PrintableResult result;
     private Float rawResult;
 
-    public EvaluationResult(PrintableResult result, float rawResult) {
+    public EvaluationResult(PrintableResult result, Float rawResult) {
         this.result = result;
         this.rawResult = rawResult;
     }
@@ -14,7 +14,7 @@ public class EvaluationResult {
         return result;
     }
 
-    public float getRawResult() {
+    public Float getRawResult() {
         return rawResult;
     }
 }

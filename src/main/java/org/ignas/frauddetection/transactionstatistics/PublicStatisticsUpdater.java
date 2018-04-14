@@ -42,7 +42,7 @@ public class PublicStatisticsUpdater extends AbstractVerticle {
             for (LearningRequest request : batch.getItems()) {
                 BehaviourData data = request.getBehaviourData();
 
-                long timeDiff = data.getTimeDifferenceFromLast();
+                long timeDiff = Float.valueOf(data.getTimeDifferenceFromLast()).longValue();
                 timeDiffIncrement += timeDiff;
                 squaredTimeDiffIncrement += timeDiff * timeDiff;
 

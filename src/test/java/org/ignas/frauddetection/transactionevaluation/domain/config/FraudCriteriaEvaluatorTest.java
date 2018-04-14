@@ -1,9 +1,8 @@
 package org.ignas.frauddetection.transactionevaluation.domain.config;
 
-import com.google.common.collect.ImmutableList;
 import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionevaluation.domain.Transaction;
-import org.ignas.frauddetection.transactionevaluation.domain.calculation.PrintableResult;
+import org.ignas.frauddetection.transactionevaluation.domain.calculation.EvaluationResult;
 import org.ignas.frauddetection.transactionevaluation.domain.stats.DebtorStatistics;
 import org.ignas.frauddetection.transactionevaluation.domain.stats.EnvironmentStatistics;
 import org.ignas.frauddetection.transactionevaluation.domain.stats.GlobalStatistics;
@@ -21,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static com.google.common.collect.ImmutableList.of;
-import static org.junit.jupiter.api.Assertions.*;
 
 class FraudCriteriaEvaluatorTest {
 
@@ -30,7 +28,7 @@ class FraudCriteriaEvaluatorTest {
         FraudCriteriaEvaluator evaluator = new FraudCriteriaEvaluator();
 
         try {
-            PrintableResult result = evaluator.evaluate("Any_criteria", null, null);
+            EvaluationResult result = evaluator.evaluate("Any_criteria", null, null);
             Assertions.fail("Exception was not thrown");
         } catch (IllegalArgumentException ex) {
 
@@ -70,13 +68,18 @@ class FraudCriteriaEvaluatorTest {
             null
         );
 
-        PrintableResult day = evaluator.evaluate("AVERAGE_SUM/P1D", transaction, data);
-        PrintableResult week = evaluator.evaluate("AVERAGE_SUM/P7D", transaction, data);
-        PrintableResult month = evaluator.evaluate("AVERAGE_SUM/P30D", transaction, data);
+        EvaluationResult day = evaluator.evaluate("AVERAGE_SUM/P1D", transaction, data);
+        EvaluationResult week = evaluator.evaluate("AVERAGE_SUM/P7D", transaction, data);
+        EvaluationResult month = evaluator.evaluate("AVERAGE_SUM/P30D", transaction, data);
 
-        Assertions.assertEquals("LESS_THAN_EXPECTED", day.representation());
-        Assertions.assertEquals("MUCH_MORE_THAN_EXPECTED", week.representation());
-        Assertions.assertEquals("MORE_THAN_EXPECTED", month.representation());
+        Assertions.assertEquals("LESS_THAN_EXPECTED", day.getResult().representation());
+        Assertions.assertNull(day.getRawResult());
+
+        Assertions.assertEquals("MUCH_MORE_THAN_EXPECTED", week.getResult().representation());
+        Assertions.assertNull(week.getRawResult());
+
+        Assertions.assertEquals("MORE_THAN_EXPECTED", month.getResult().representation());
+        Assertions.assertNull(month.getRawResult());
     }
 
 
@@ -113,13 +116,18 @@ class FraudCriteriaEvaluatorTest {
             null
         );
 
-        PrintableResult day = evaluator.evaluate("AVERAGE_COUNT/P1D", transaction, data);
-        PrintableResult week = evaluator.evaluate("AVERAGE_COUNT/P7D", transaction, data);
-        PrintableResult month = evaluator.evaluate("AVERAGE_COUNT/P30D", transaction, data);
+        EvaluationResult day = evaluator.evaluate("AVERAGE_COUNT/P1D", transaction, data);
+        EvaluationResult week = evaluator.evaluate("AVERAGE_COUNT/P7D", transaction, data);
+        EvaluationResult month = evaluator.evaluate("AVERAGE_COUNT/P30D", transaction, data);
 
-        Assertions.assertEquals("MORE_THAN_EXPECTED", day.representation());
-        Assertions.assertEquals("MUCH_LESS_THAN_EXPECTED", week.representation());
-        Assertions.assertEquals("EXPECTED", month.representation());
+        Assertions.assertEquals("MORE_THAN_EXPECTED", day.getResult().representation());
+        Assertions.assertNull(day.getRawResult());
+
+        Assertions.assertEquals("MUCH_LESS_THAN_EXPECTED", week.getResult().representation());
+        Assertions.assertNull(week.getRawResult());
+
+        Assertions.assertEquals("EXPECTED", month.getResult().representation());
+        Assertions.assertNull(month.getRawResult());
     }
 
     @Test
@@ -135,6 +143,7 @@ class FraudCriteriaEvaluatorTest {
                 null,
                 null,
                 of(
+                    new PersonalPeriodStatistics(Days.days(1), 30f, 1),
                     new PersonalPeriodStatistics(Days.days(7), 300f, 4),
                     new PersonalPeriodStatistics(Days.days(30), 650f, 25)
                 )
@@ -142,6 +151,7 @@ class FraudCriteriaEvaluatorTest {
             new GlobalStatistics(
                 of(),
                 of(
+                    MeanPeriodStatistics.<Float>builder(Days.days(1)).pastValues(0.8f, 0.2f).build(),
                     MeanPeriodStatistics.<Float>builder(Days.days(7)).pastValues(0.1f, 0.05f).build(),
                     MeanPeriodStatistics.<Float>builder(Days.days(30)).pastValues(0.03f, 0.01f).build()
                 ),
@@ -153,11 +163,18 @@ class FraudCriteriaEvaluatorTest {
             null
         );
 
-        PrintableResult week = evaluator.evaluate("AVERAGE_PERIOD_AMOUNT_RATIO/P7D", transaction, data);
-        PrintableResult month = evaluator.evaluate("AVERAGE_PERIOD_AMOUNT_RATIO/P30D", transaction, data);
+        EvaluationResult day = evaluator.evaluate("AVERAGE_PERIOD_AMOUNT_RATIO/P1D", transaction, data);
+        EvaluationResult week = evaluator.evaluate("AVERAGE_PERIOD_AMOUNT_RATIO/P7D", transaction, data);
+        EvaluationResult month = evaluator.evaluate("AVERAGE_PERIOD_AMOUNT_RATIO/P30D", transaction, data);
 
-        Assertions.assertEquals("LESS_THAN_EXPECTED", week.representation());
-        Assertions.assertEquals("EXPECTED", month.representation());
+        Assertions.assertEquals("MUCH_LESS_THAN_EXPECTED", day.getResult().representation());
+        Assertions.assertEquals(0.33f, day.getRawResult(), 0.01f);
+
+        Assertions.assertEquals("LESS_THAN_EXPECTED", week.getResult().representation());
+        Assertions.assertEquals(0.047f, week.getRawResult(), 0.001f);
+
+        Assertions.assertEquals("EXPECTED", month.getResult().representation());
+        Assertions.assertEquals(0.022f, month.getRawResult(), 0.001f);
     }
 
 
@@ -189,13 +206,18 @@ class FraudCriteriaEvaluatorTest {
             null
         );
 
-        PrintableResult smaller = evaluator.evaluate("MAX_SPENT_AMOUNT", smallTransaction, data);
-        PrintableResult bigger = evaluator.evaluate("MAX_SPENT_AMOUNT", bigTransaction, data);
-        PrintableResult same = evaluator.evaluate("MAX_SPENT_AMOUNT", sameTransaction, data);
+        EvaluationResult smaller = evaluator.evaluate("MAX_SPENT_AMOUNT", smallTransaction, data);
+        EvaluationResult bigger = evaluator.evaluate("MAX_SPENT_AMOUNT", bigTransaction, data);
+        EvaluationResult same = evaluator.evaluate("MAX_SPENT_AMOUNT", sameTransaction, data);
 
-        Assertions.assertEquals("FALSE", smaller.representation());
-        Assertions.assertEquals("TRUE", bigger.representation());
-        Assertions.assertEquals("FALSE", same.representation());
+        Assertions.assertEquals("FALSE", smaller.getResult().representation());
+        Assertions.assertNull(smaller.getRawResult());
+
+        Assertions.assertEquals("TRUE", bigger.getResult().representation());
+        Assertions.assertNull(smaller.getRawResult());
+
+        Assertions.assertEquals("FALSE", same.getResult().representation());
+        Assertions.assertNull(smaller.getRawResult());
     }
 
     @Test
@@ -210,15 +232,22 @@ class FraudCriteriaEvaluatorTest {
 
         HistoricalData data = new HistoricalData(null, null, null);
 
-        PrintableResult small = evaluator.evaluate("AMOUNT_CATEGORY", smallTransaction, data);
-        PrintableResult big = evaluator.evaluate("AMOUNT_CATEGORY", bigTransaction, data);
-        PrintableResult bigger = evaluator.evaluate("AMOUNT_CATEGORY", biggerTransaction, data);
-        PrintableResult veryBig = evaluator.evaluate("AMOUNT_CATEGORY", veryBigTransaction, data);
+        EvaluationResult small = evaluator.evaluate("AMOUNT_CATEGORY", smallTransaction, data);
+        EvaluationResult big = evaluator.evaluate("AMOUNT_CATEGORY", bigTransaction, data);
+        EvaluationResult bigger = evaluator.evaluate("AMOUNT_CATEGORY", biggerTransaction, data);
+        EvaluationResult veryBig = evaluator.evaluate("AMOUNT_CATEGORY", veryBigTransaction, data);
 
-        Assertions.assertEquals("VERY_SMALL_AMOUNT", small.representation());
-        Assertions.assertEquals("SMALL_AMOUNT", big.representation());
-        Assertions.assertEquals("BIG_AMOUNT", bigger.representation());
-        Assertions.assertEquals("VERY_BIG_AMOUNT", veryBig.representation());
+        Assertions.assertEquals("VERY_SMALL_AMOUNT", small.getResult().representation());
+        Assertions.assertNull(small.getRawResult());
+
+        Assertions.assertEquals("SMALL_AMOUNT", big.getResult().representation());
+        Assertions.assertNull(big.getRawResult());
+
+        Assertions.assertEquals("BIG_AMOUNT", bigger.getResult().representation());
+        Assertions.assertNull(bigger.getRawResult());
+
+        Assertions.assertEquals("VERY_BIG_AMOUNT", veryBig.getResult().representation());
+        Assertions.assertNull(veryBig.getRawResult());
     }
 
 
@@ -234,9 +263,10 @@ class FraudCriteriaEvaluatorTest {
             new EnvironmentStatistics(null, null, new FraudRate(0.005f, 0.002f, 0.001f))
         );
 
-        PrintableResult small = evaluator.evaluate("TIME_RISK", transaction, data);
+        EvaluationResult timeRisk = evaluator.evaluate("TIME_RISK", transaction, data);
 
-        Assertions.assertEquals("MUCH_MORE_THAN_EXPECTED", small.representation());
+        Assertions.assertEquals("MUCH_MORE_THAN_EXPECTED", timeRisk.getResult().representation());
+        Assertions.assertNull(timeRisk.getRawResult());
     }
 
 
@@ -275,11 +305,14 @@ class FraudCriteriaEvaluatorTest {
             null
         );
 
-        PrintableResult morning = evaluator.evaluate("MIN_TIME_BETWEEN_TRANSACTIONS", morningTransaction, data);
-        PrintableResult evening = evaluator.evaluate("MIN_TIME_BETWEEN_TRANSACTIONS", eveningTransaction, data);
+        EvaluationResult morning = evaluator.evaluate("MIN_TIME_BETWEEN_TRANSACTIONS", morningTransaction, data);
+        EvaluationResult evening = evaluator.evaluate("MIN_TIME_BETWEEN_TRANSACTIONS", eveningTransaction, data);
 
-        Assertions.assertEquals("TRUE", morning.representation());
-        Assertions.assertEquals("FALSE", evening.representation());
+        Assertions.assertEquals("TRUE", morning.getResult().representation());
+        Assertions.assertEquals(109f, morning.getRawResult(), 0.001f);
+
+        Assertions.assertEquals("FALSE", evening.getResult().representation());
+        Assertions.assertEquals(32509f, evening.getRawResult(), 0.001f);
     }
 
 
@@ -325,11 +358,14 @@ class FraudCriteriaEvaluatorTest {
             null
         );
 
-        PrintableResult morning = evaluator.evaluate("AVERAGE_TIME_BETWEEN_TRANSACTIONS", morningTransaction, data);
-        PrintableResult evening = evaluator.evaluate("AVERAGE_TIME_BETWEEN_TRANSACTIONS", eveningTransaction, data);
+        EvaluationResult morning = evaluator.evaluate("AVERAGE_TIME_BETWEEN_TRANSACTIONS", morningTransaction, data);
+        EvaluationResult evening = evaluator.evaluate("AVERAGE_TIME_BETWEEN_TRANSACTIONS", eveningTransaction, data);
 
-        Assertions.assertEquals("MUCH_LESS_THAN_EXPECTED", morning.representation());
-        Assertions.assertEquals("MUCH_MORE_THAN_EXPECTED", evening.representation());
+        Assertions.assertEquals("MUCH_LESS_THAN_EXPECTED", morning.getResult().representation());
+        Assertions.assertNull(morning.getRawResult());
+
+        Assertions.assertEquals("MUCH_MORE_THAN_EXPECTED", evening.getResult().representation());
+        Assertions.assertNull(morning.getRawResult());
     }
 
     @Test
@@ -355,9 +391,10 @@ class FraudCriteriaEvaluatorTest {
             )
         );
 
-        PrintableResult result = evaluator.evaluate("LOCATION_RISK", transaction, data);
+        EvaluationResult result = evaluator.evaluate("LOCATION_RISK", transaction, data);
 
-        Assertions.assertEquals("LESS_THAN_EXPECTED", result.representation());
+        Assertions.assertEquals("LESS_THAN_EXPECTED", result.getResult().representation());
+        Assertions.assertNull(result.getRawResult());
     }
 
     @Test
@@ -369,13 +406,13 @@ class FraudCriteriaEvaluatorTest {
             25f,
             null,
             null,
-            new Location(54.0000f, 25.0000f),
+            new Location(54.123456f, 25.456123f),
             null
         );
 
         HistoricalData data = new HistoricalData(
             new DebtorStatistics(
-                new Location(54.123456f, 25.456123f),
+                new Location(54.0000f, 25.0000f),
                 null,
                 0f,
                 null,
@@ -393,9 +430,10 @@ class FraudCriteriaEvaluatorTest {
             null
         );
 
-        PrintableResult result = evaluator.evaluate("AVERAGE_DISTANCE_FROM_COMMON_LOCATION", morningTransaction, data);
+        EvaluationResult result = evaluator.evaluate("AVERAGE_DISTANCE_FROM_COMMON_LOCATION", morningTransaction, data);
 
-        Assertions.assertEquals("EXPECTED", result.representation());
+        Assertions.assertEquals("EXPECTED", result.getResult().representation());
+        Assertions.assertEquals(result.getRawResult(), 0.47f, 0.01f);
     }
 
     @Test
@@ -431,9 +469,10 @@ class FraudCriteriaEvaluatorTest {
             null
         );
 
-        PrintableResult result = evaluator.evaluate("AVERAGE_DISTANCE_FROM_LAST_LOCATION", morningTransaction, data);
+        EvaluationResult result = evaluator.evaluate("AVERAGE_DISTANCE_FROM_LAST_LOCATION", morningTransaction, data);
 
-        Assertions.assertEquals("MUCH_LESS_THAN_EXPECTED", result.representation());
+        Assertions.assertEquals("MUCH_LESS_THAN_EXPECTED", result.getResult().representation());
+        Assertions.assertEquals(result.getRawResult(), 0.07f, 0.01f);
     }
 
     @Test
@@ -459,9 +498,10 @@ class FraudCriteriaEvaluatorTest {
             )
         );
 
-        PrintableResult result = evaluator.evaluate("CREDITOR_RISK", transaction, data);
+        EvaluationResult result = evaluator.evaluate("CREDITOR_RISK", transaction, data);
 
-        Assertions.assertEquals("LESS_THAN_EXPECTED", result.representation());
+        Assertions.assertEquals("LESS_THAN_EXPECTED", result.getResult().representation());
+        Assertions.assertNull(result.getRawResult());
     }
 
     @Test
@@ -559,8 +599,8 @@ class FraudCriteriaEvaluatorTest {
 
         FraudCriteriaEvaluator evaluator = new FraudCriteriaEvaluator();
 
-        Map<String, String> result = evaluator.evaluateAll(transaction, data);
+        Map<String, EvaluationResult> result = evaluator.evaluateAll(transaction, data);
 
-        Assertions.assertEquals(17, result.size());
+        Assertions.assertEquals(18, result.size());
     }
 }

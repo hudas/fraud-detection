@@ -44,7 +44,7 @@ public class PersonalStats {
         }
 
         upateAmount(requestTransaction.getAmount());
-        updateMinTimeDiff(request.getBehaviourData().getTimeDifferenceFromLast());
+        updateMinTimeDiff(Float.valueOf(request.getBehaviourData().getTimeDifferenceFromLast()).longValue());
 
         String shortCode = LocationService.toNearestArea(requestTransaction.getLocation()).toString();
         Integer hourOfDay = requestTransaction.getTime().getHourOfDay();
