@@ -38,7 +38,7 @@ public class GroupProbabilitiesHandler implements Handler<Message<Object>> {
 
         CriteriaGroupProbabilityRequest probabilityRequest = (CriteriaGroupProbabilityRequest) message.body();
 
-        Future<GeneralOccurrences> generalLoader = generalProbabilitiesStorage.fetch();
+        Future<GeneralOccurrences> generalLoader = generalProbabilitiesStorage.fetch(1);
 
         Future<List<CriteriaStatistics>> groupStatsLoader =
             groupStorage.fetchValues(probabilityRequest.getGroups());

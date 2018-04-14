@@ -88,10 +88,24 @@ public class FraudCriteriaConfig {
         return new NamedCriteria.Builder<DeviationStatistics>("AVERAGE_DISTANCE_FROM_COMMON_LOCATION", LOCATION_GROUP)
             .calculator(new DeviationEvaluator())
             .mapper((Transaction transaction, HistoricalData statistics) -> {
+                Location mostUsedLocation = statistics.getDebtor().getMostUsedLocation();
+
+                // First transaction for each debtor should be always expected.
+                if (mostUsedLocation == null) {
+                    return new MapperResult<>(
+                        new DeviationStatistics(
+                            0f,
+                            0f,
+                            0f
+                        ),
+                        0f
+                    );
+                }
+
                 Location transactionLocation = transaction.getLocation();
 
                 float distanceDegrees = (float) transactionLocation
-                    .distanceTo(statistics.getDebtor().getMostUsedLocation());
+                    .distanceTo(mostUsedLocation);
 
                 return new MapperResult<>(
                     new DeviationStatistics(
@@ -109,8 +123,20 @@ public class FraudCriteriaConfig {
         return new NamedCriteria.Builder<DeviationStatistics>("AVERAGE_DISTANCE_FROM_LAST_LOCATION", LOCATION_GROUP)
             .calculator(new DeviationEvaluator())
             .mapper((Transaction transaction, HistoricalData statistics) -> {
-                Location transactionLocation = transaction.getLocation();
                 Location previousLocation = statistics.getDebtor().getLastTransactionLocation();
+                if (previousLocation == null) {
+                    return new MapperResult<>(
+                        new DeviationStatistics(
+                            0f,
+                            0f,
+                            0f
+                        ),
+                        0f
+                    );
+                }
+
+                Location transactionLocation = transaction.getLocation();
+
 
                 float distanceDegrees = (float) transactionLocation
                     .distanceTo(previousLocation);
@@ -149,6 +175,16 @@ public class FraudCriteriaConfig {
                 LocalDateTime previousTransactionTime = statistics.getDebtor()
                     .getLastTransactionExecutionTime();
 
+                if (previousTransactionTime == null) {
+                    return MapperResult.withoutBehaviour(
+                        new DeviationStatistics(
+                            0f,
+                            0f,
+                            0f
+                        )
+                    );
+                }
+
                 LocalDateTime executionTime = transaction.getTime();
 
                 Seconds timeBetween =
@@ -170,13 +206,28 @@ public class FraudCriteriaConfig {
     private static NamedCriteria defineMinTimeBetweenTransactionsCriterion() {
         return new NamedCriteria.Builder<ComparableStatistics>("MIN_TIME_BETWEEN_TRANSACTIONS", TIME_GROUP)
             .calculator(comparableStatistics -> {
-                float timeBetween = comparableStatistics.getTransactionResult();
                 float minTimeBetween = comparableStatistics.getHistoricalResult();
+
+                if (minTimeBetween == 0f) {
+                    return BooleanCriteria.TRUE;
+                }
+
+                float timeBetween = comparableStatistics.getTransactionResult();
 
                 return timeBetween < minTimeBetween ? BooleanCriteria.TRUE : BooleanCriteria.FALSE;
             })
             .mapper((Transaction transaction, HistoricalData statistics) -> {
                 LocalDateTime lastTransaction = statistics.getDebtor().getLastTransactionExecutionTime();
+                if (lastTransaction == null) {
+                    return new MapperResult<ComparableStatistics>(
+                        new ComparableStatistics(
+                            0f,
+                            0f
+                        ),
+                        0f
+                    );
+                }
+
                 Seconds timeBetween = Seconds.secondsBetween(lastTransaction, transaction.getTime());
 
                 Seconds shortestPreviousTime = statistics.getDebtor().getShortestTimeBetweenTransactions();

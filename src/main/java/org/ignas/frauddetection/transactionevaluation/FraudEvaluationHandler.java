@@ -26,7 +26,7 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
 
     private GroupProbabilityCache cache;
     private ServiceIntegration<Transaction, HistoricalData> transactionStatisticsIntegration;
-    private ServiceIntegration<Map<String, String>, ProbabilityStatistics> probabilityStatisticsIntegration;
+    private ServiceIntegration<Map<String, String>, ProbabilityStatistics> criteriaProbabilityIntegration;
 
     private static FraudCriteriaEvaluator criteriaEvaluator = new FraudCriteriaEvaluator();
     private static GroupRiskEvaluator evaluator = new GroupRiskEvaluator(criteriaEvaluator);
@@ -35,12 +35,12 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
     public FraudEvaluationHandler(
         GroupProbabilityCache cache,
         ServiceIntegration<Transaction, HistoricalData> transactionStatisticsIntegration,
-        ServiceIntegration<Map<String, String>, ProbabilityStatistics> probabilityStatisticsIntegration,
+        ServiceIntegration<Map<String, String>, ProbabilityStatistics> criteriaProbabilityIntegration,
         OneWayServiceIntegration<LearningRequest> learningInitiationIntegration) {
 
         this.cache = cache;
         this.transactionStatisticsIntegration = transactionStatisticsIntegration;
-        this.probabilityStatisticsIntegration = probabilityStatisticsIntegration;
+        this.criteriaProbabilityIntegration = criteriaProbabilityIntegration;
         this.learningInitiator = new LearningEventPublisher(criteriaEvaluator, learningInitiationIntegration);
     }
 
@@ -59,6 +59,7 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
             .setHandler(historyLoaded -> {
                 if (historyLoaded.failed()) {
                     System.out.println("Failed to load transaction history: " + historyLoaded.cause().getMessage());
+                    historyLoaded.cause().printStackTrace();
                     throw new IllegalStateException(historyLoaded.cause());
                 }
 
@@ -68,15 +69,15 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
                 Map<String, String> criteriaValues = new HashMap<>();
                 evaluationResult.forEach((key, value) -> criteriaValues.put(key, value.getResult().representation()));
 
-                EvaluationResult dailyRatioResult = evaluationResult.get("AVERAGE_PERIOD_AMOUNT_RATIO/P1");
-                EvaluationResult weeklyRatioResult = evaluationResult.get("AVERAGE_PERIOD_AMOUNT_RATIO/P7");
-                EvaluationResult monthlyRatioResult = evaluationResult.get("AVERAGE_PERIOD_AMOUNT_RATIO/P30");
+                EvaluationResult dailyRatioResult = evaluationResult.get("AVERAGE_PERIOD_AMOUNT_RATIO/P1D");
+                EvaluationResult weeklyRatioResult = evaluationResult.get("AVERAGE_PERIOD_AMOUNT_RATIO/P7D");
+                EvaluationResult monthlyRatioResult = evaluationResult.get("AVERAGE_PERIOD_AMOUNT_RATIO/P30D");
 
                 EvaluationResult distanceFromCommon = evaluationResult.get("AVERAGE_DISTANCE_FROM_COMMON_LOCATION");
                 EvaluationResult distanceFromLast = evaluationResult.get("AVERAGE_DISTANCE_FROM_LAST_LOCATION");
                 EvaluationResult timeToLast = evaluationResult.get("MIN_TIME_BETWEEN_TRANSACTIONS");
 
-                Future<ProbabilityStatistics> probabilityStatistics = probabilityStatisticsIntegration.load(criteriaValues);
+                Future<ProbabilityStatistics> probabilityStatistics = criteriaProbabilityIntegration.load(criteriaValues);
 
                 probabilityStatistics.setHandler(probabilitiesLoaded -> {
                     if (probabilitiesLoaded.failed()) {

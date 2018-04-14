@@ -21,8 +21,15 @@ public class ProbabilityCalculatorIntegration implements ServiceIntegration<Eval
 
         bus.send(RESOLVER_ADDRESS, toResolverAPI(request), reply -> {
 
+            if (reply.failed()) {
+                System.out.println("ProbabilityCalculatorIntegration" + reply.cause().getMessage());
+                reply.cause().printStackTrace();
+                loader.fail(reply.cause());
+                return;
+            }
+
             if (!(reply.result().body() instanceof Float)) {
-                loader.fail(new IllegalStateException("Unsupported message type: " + reply.result().getClass()));
+                loader.fail(new IllegalStateException("ProbabilityCalculatorIntegration: Unsupported message type: " + reply.result().getClass()));
                 return;
             }
 

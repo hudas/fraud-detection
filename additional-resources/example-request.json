@@ -1,12 +1,12 @@
 {
-    "transactionId" : "123",
-    "debtorCreditCardId" : "1234",
-    "debtorAccountId": "1235",
-    "creditorAccountId":"1236",
-    "amount": 123.75,
-    "time": "2018-02-24T14:51:36.1234+03:00",
+    "transactionId" : "1234",
+    "debtorCreditCardId" : "1235",
+    "debtorAccountId": "123",
+    "creditorAccountId":"1237",
+    "amount": 11.99,
+    "time": "2018-03-25T18:41:36.1234+03:00",
     "location": {
-        "longtitude" : "54.312312",
-        "latitude" : "25.312315"
+        "longtitude" : "26.622315",
+        "latitude" : "55.312512"
     }
 }

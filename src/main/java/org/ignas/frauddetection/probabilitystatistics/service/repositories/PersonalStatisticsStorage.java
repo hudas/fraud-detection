@@ -27,7 +27,7 @@ public class PersonalStatisticsStorage {
     public static final String LOCATION_OBJECT = "location";
     public static final String LONGTITUDE_FIELD = "longtitude";
     public static final String LATITUDE_FIELD = "latitude";
-    public static final String AMOUNT_FIELD = "amoun";
+    public static final String AMOUNT_FIELD = "amount";
     public static final String TIME_FIELD = "time";
     public static final String MAX_AMOUNT_FIELD = "maxAmount";
     public static final String MIN_TIME_DIFF_FIELD = "minTimeDiff";
@@ -64,6 +64,11 @@ public class PersonalStatisticsStorage {
                 if (t != null) {
                     t.printStackTrace();
                     future.fail(t);
+                    return;
+                }
+
+                if (result == null) {
+                    future.complete(null);
                     return;
                 }
 
@@ -200,7 +205,7 @@ public class PersonalStatisticsStorage {
         PersonalTransactionStats lastTransaction = parseLastTransaction(document);
 
         Float maxAmount = document.getDouble(MAX_AMOUNT_FIELD).floatValue();
-        Integer minTimeDifference = document.getInteger(MIN_TIME_DIFF_FIELD);
+        Integer minTimeDifference = document.getLong(MIN_TIME_DIFF_FIELD).intValue();
 
         stats.setLatestTransaction(lastTransaction);
         stats.setMinTimeDiff(minTimeDifference.longValue());
@@ -268,11 +273,13 @@ public class PersonalStatisticsStorage {
 
             List<Document> transactionDocs = (List<Document>) document.get(TRANSACTIONS_OBJECT);
 
-            for (Document transactionDoc: transactionDocs) {
-                LocalDateTime transactionTime = LocalDateTime.parse(transactionDoc.getString(TRANSACTION_TIME_FIELD));
-                Float transactionValue = transactionDoc.getDouble(TRANSACTION_AMOUNT_FIELD).floatValue();
+            if (transactionDocs != null) {
+                for (Document transactionDoc: transactionDocs) {
+                    LocalDateTime transactionTime = LocalDateTime.parse(transactionDoc.getString(TRANSACTION_TIME_FIELD));
+                    Float transactionValue = transactionDoc.getDouble(TRANSACTION_AMOUNT_FIELD).floatValue();
 
-                periodTransactions.add(new PersonalPeriodTransaction(transactionTime, transactionValue));
+                    periodTransactions.add(new PersonalPeriodTransaction(transactionTime, transactionValue));
+                }
             }
 
             Integer transactionCount = periodDoc.getInteger(COUNT_FIELD);

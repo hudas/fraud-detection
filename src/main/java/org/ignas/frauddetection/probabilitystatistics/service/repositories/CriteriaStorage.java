@@ -65,7 +65,9 @@ public class CriteriaStorage {
         return loader;
     }
 
-    public Future<List<CriteriaStatistics>> fetchStatistics(Map<String, String> criteriaValues) {
+    public Future<List<CriteriaStatistics>> fetchStatistics(long id, Map<String, String> criteriaValues) {
+        System.out.println("CriteriaStorage-FETCH-START" + id);
+
         Future<List<CriteriaStatistics>> totalLoader = Future.future();
 
         List<CriteriaStatistics> loadedStatistics = new ArrayList<>();
@@ -82,9 +84,12 @@ public class CriteriaStorage {
                     return;
                 }
 
+                System.out.println("CriteriaStorage-FETCH-ONE-" + loadedStatistics.size() + "-" + criteriaToLoad + " / " + id);
+
                 loadedStatistics.add(criteriaResult.result());
 
                 if (loadedStatistics.size() == criteriaToLoad) {
+                    System.out.println("CriteriaStorage-FETCH-ALL-");
                     totalLoader.complete(loadedStatistics);
                 }
             }));
@@ -124,6 +129,9 @@ public class CriteriaStorage {
 
                 Document values = Iterables.getFirst((List< Document >) result.get("values"), null);
                 if (values == null) {
+                    loader.fail(new IllegalStateException(
+                        "Values missing for criteria: " + name + " Value: " + name
+                    ));
                     throw new IllegalStateException(
                         "Values missing for criteria: " + name + " Value: " + name
                     );

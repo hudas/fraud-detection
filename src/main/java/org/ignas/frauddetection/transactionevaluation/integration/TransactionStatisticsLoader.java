@@ -27,6 +27,14 @@ public class TransactionStatisticsLoader implements ServiceIntegration<Transacti
         Future<HistoricalData> loader = Future.future();
 
         bus.send("transaction-statistic.archive", mapRequest(request), statisticsResponse -> {
+
+            if (statisticsResponse.failed()) {
+                System.out.println("ProbabilityCalculatorIntegration" + statisticsResponse.cause().getMessage());
+                statisticsResponse.cause().printStackTrace();
+                loader.fail(statisticsResponse.cause());
+            }
+
+
             if (!(statisticsResponse.result().body() instanceof Statistics)) {
                 loader.fail("Unsupported message type: " + statisticsResponse.result().getClass());
                 return;

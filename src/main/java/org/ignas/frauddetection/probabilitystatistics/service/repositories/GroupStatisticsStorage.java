@@ -69,7 +69,9 @@ public class GroupStatisticsStorage {
         return loader;
     }
 
-    public Future<Map<String, GroupTotalStats>> fetchTotalStats() {
+    public Future<Map<String, GroupTotalStats>> fetchTotalStats(long id) {
+        System.out.println("GroupStatisticsStorage-FETCH-START" + id);
+
         Future loader = Future.future();
 
         Map<String, GroupTotalStats> resultMap = new HashMap<>();
@@ -78,6 +80,7 @@ public class GroupStatisticsStorage {
             .projection(Projections.include(NAME_FIELD, TOTALS_DOC))
             .forEach(
                 document -> {
+                    System.out.println("GroupStatisticsStorage-FETCH-ONE-STOP" + id);
                     String name = document.getString(NAME_FIELD);
                     Document totals = (Document) document.get(TOTALS_DOC);
 
@@ -94,9 +97,12 @@ public class GroupStatisticsStorage {
                 (result, t) -> {
                     if (t != null) {
                         System.out.println(t.getMessage());
+                        System.out.println("GroupStatisticsStorage-FETCH-FAIL" + id);
                         loader.fail(t);
                         return;
                     }
+
+                    System.out.println("GroupStatisticsStorage-FETCH-STOP" + id);
 
                     loader.complete(resultMap);
                 }

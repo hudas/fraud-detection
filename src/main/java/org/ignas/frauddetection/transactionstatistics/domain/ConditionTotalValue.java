@@ -13,6 +13,10 @@ public class ConditionTotalValue {
         this.sumOfSquaredValues = sumOfSquaredValues;
     }
 
+    public static ConditionTotalValue unknown() {
+        return new ConditionTotalValue(0, 0f, 0f);
+    }
+
     public long getInstances() {
         return instances;
     }

@@ -71,9 +71,12 @@ public class ConditionStorage {
                     return;
                 }
 
-                ConditionOccurrences mappedResult = buildOccurrencesFromDocument(result);
+                if (result == null) {
+                    creditorLoader.complete(ConditionOccurrences.empty(creditor));
+                    return;
+                }
 
-                creditorLoader.complete(mappedResult);
+                creditorLoader.complete(buildOccurrencesFromDocument(result));
             });
 
         Future<ConditionOccurrences> timeLoader = Future.future();
@@ -84,13 +87,12 @@ public class ConditionStorage {
                     return;
                 }
 
-                ConditionOccurrences mappedResult = new ConditionOccurrences<Integer>(
-                    result.getInteger(ID_FIELD),
-                    result.getLong(TOTAL_OCCURRENCES_FIELD),
-                    result.getLong(FRAUD_OCCURRENCES_FIELD)
-                );
+                if (result == null) {
+                    timeLoader.complete(ConditionOccurrences.empty(hour.getHourOfDay()));
+                    return;
+                }
 
-                timeLoader.complete(mappedResult);
+                timeLoader.complete(buildOccurrencesFromDocument(result));
             });
 
         Future<ConditionOccurrences> locationLoader = Future.future();
@@ -101,9 +103,12 @@ public class ConditionStorage {
                     return;
                 }
 
-                ConditionOccurrences mappedResult = buildOccurrencesFromDocument(result);
+                if (result == null) {
+                    locationLoader.complete(ConditionOccurrences.empty(hour.getHourOfDay()));
+                    return;
+                }
 
-                timeLoader.complete(mappedResult);
+                locationLoader.complete(buildOccurrencesFromDocument(result));
             });
 
         Future<ConditionTotals> totalsLoader = Future.future();
@@ -138,6 +143,11 @@ public class ConditionStorage {
                     return;
                 }
 
+                if (result == null) {
+                    totalsLoader.complete(ConditionTotals.unknown());
+                    return;
+                }
+
                 totalsLoader.complete(totals);
             });
 
@@ -159,8 +169,8 @@ public class ConditionStorage {
                 ConditionTotals totalStats = allLoaded.result().resultAt(3);
 
                 ConditionStats creditorStats = buildStats(creditorOccurrences, totalStats.getCreditorTotal());
-                ConditionStats timeStats = buildStats(timeOccurrences, totalStats.getCreditorTotal());
-                ConditionStats locationStats = buildStats(locationOccurrences, totalStats.getCreditorTotal());
+                ConditionStats timeStats = buildStats(timeOccurrences, totalStats.getTimeTotal());
+                ConditionStats locationStats = buildStats(locationOccurrences, totalStats.getLocationTotal());
 
                 future.complete(new ExternalConditions(creditorStats, timeStats, locationStats));
             });
@@ -169,8 +179,15 @@ public class ConditionStorage {
     }
 
     private ConditionStats buildStats(ConditionOccurrences<?> occurrences, ConditionTotalValue totalValue) {
+        final Float valueRisk;
+        if (occurrences.getOccurrences() == 0) {
+            valueRisk = 0f;
+        } else {
+            valueRisk = ((float) occurrences.getFraudOccurrences()) / occurrences.getOccurrences();
+        }
+
         return new ConditionStats(
-            ((float) occurrences.getFraudOccurrences()) / occurrences.getOccurrences(),
+            valueRisk,
             totalValue.getSumOfValues(),
             totalValue.getSumOfSquaredValues(),
             totalValue.getInstances()
@@ -234,8 +251,8 @@ public class ConditionStorage {
 
                 List<UpdateOneModel<Document>> totalUpdates = ImmutableList.<UpdateOneModel<Document>>builder()
                     .add(buildTotalIncrease(creditor))
-                    .add(buildTotalIncrease(creditor))
-                    .add(buildTotalIncrease(creditor))
+                    .add(buildTotalIncrease(time))
+                    .add(buildTotalIncrease(location))
                     .build();
 
 
@@ -361,7 +378,7 @@ public class ConditionStorage {
     private UpdateOneModel<Document> buildIncrement(ConditionOccurrences<?> creditor) {
 
         Document increment = new Document(TOTAL_OCCURRENCES_FIELD, creditor.getOccurrences())
-            .append(TOTAL_OCCURRENCES_FIELD, creditor.getOccurrences());
+            .append(FRAUD_OCCURRENCES_FIELD, creditor.getFraudOccurrences());
 
         return new UpdateOneModel<>(
             eq(ID_FIELD, creditor.getName()),

@@ -5,6 +5,7 @@ import org.ignas.frauddetection.transactionevaluation.api.request.TransactionDat
 import org.ignas.frauddetection.transactionstatistics.domain.LocationService;
 import org.joda.time.LocalDateTime;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -19,11 +20,11 @@ public class PersonalStats {
 
     private Long minTimeDiff;
 
-    private Map<String, Long> locationOccurences;
+    private Map<String, Long> locationOccurences = new HashMap<>();
 
-    private Map<Integer, Long> timeOccurences;
+    private Map<Integer, Long> timeOccurences = new HashMap<>();
 
-    private Map<Integer, PersonalPeriodStats> periods;
+    private Map<Integer, PersonalPeriodStats> periods = new HashMap<>();
 
     public PersonalStats(String debtor) {
         this.debtor = debtor;
@@ -52,13 +53,17 @@ public class PersonalStats {
         incLocationCount(shortCode);
         incTimeCount(hourOfDay);
 
-
-        PersonalPeriodStats currentStats = periods.computeIfAbsent(1, PersonalPeriodStats::new);
-        currentStats.add(requestTransaction);
+        periods.computeIfAbsent(1, PersonalPeriodStats::new).add(requestTransaction);
+        periods.computeIfAbsent(7, PersonalPeriodStats::new).add(requestTransaction);
+        periods.computeIfAbsent(30, PersonalPeriodStats::new).add(requestTransaction);
     }
 
     private void updateMinTimeDiff(long newTimeDiff) {
-        if (minTimeDiff == null
+        if (newTimeDiff == 0f) {
+            return;
+        }
+
+        if (minTimeDiff == null || minTimeDiff < 0
             || minTimeDiff > newTimeDiff) {
             minTimeDiff = newTimeDiff;
         }
@@ -124,7 +129,12 @@ public class PersonalStats {
         }
 
         upateAmount(increment.getMaxAmount());
-        updateMinTimeDiff(increment.getMinTimeDiff());
+        if (increment.getMinTimeDiff() == null || increment.getMinTimeDiff() <= 0) {
+            updateMinTimeDiff(Long.MAX_VALUE);
+        } else {
+            updateMinTimeDiff(increment.getMinTimeDiff());
+        }
+
 
         for (Map.Entry<String, Long> occurrence: increment.getLocationOccurences().entrySet()) {
             incLocationCount(occurrence.getKey(), occurrence.getValue());
@@ -135,9 +145,8 @@ public class PersonalStats {
         }
 
         for (Map.Entry<Integer, PersonalPeriodStats> periodIncrement : increment.getPeriods().entrySet()) {
-            PersonalPeriodStats period = periods.get(periodIncrement.getKey());
-
-            period.updateFrom(periodIncrement.getValue());
+            periods.computeIfAbsent(periodIncrement.getKey(), PersonalPeriodStats::new)
+                .updateFrom(periodIncrement.getValue());
         }
 
         return this;

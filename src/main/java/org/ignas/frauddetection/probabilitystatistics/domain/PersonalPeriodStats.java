@@ -3,6 +3,7 @@ package org.ignas.frauddetection.probabilitystatistics.domain;
 import org.ignas.frauddetection.transactionevaluation.api.request.TransactionData;
 import org.joda.time.LocalDateTime;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -10,7 +11,7 @@ public class PersonalPeriodStats {
 
     private int length;
 
-    private List<PersonalPeriodTransaction> transactions;
+    private List<PersonalPeriodTransaction> transactions = new ArrayList<>();
 
     private int count = 0;
     private float sum = 0f;

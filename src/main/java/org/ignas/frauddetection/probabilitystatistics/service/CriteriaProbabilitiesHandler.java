@@ -44,14 +44,19 @@ public class CriteriaProbabilitiesHandler implements Handler<Message<Object>> {
 
         CriteriaProbabilityRequest request = (CriteriaProbabilityRequest) message.body();
 
-        Future<GeneralOccurrences> generalLoader = generalProbabilitiesStorage.fetch();
-        Future<List<CriteriaStatistics>> criteriaLoader = criteriaStorage.fetchStatistics(request.getCriteriaValues());
-        Future<Map<String, GroupTotalStats>> groupLoader = groupStatisticsStorage.fetchTotalStats();
+        System.out.println("CriteriaProbabilitiesHandler-START" + request.getId());
 
+        Future<GeneralOccurrences> generalLoader = generalProbabilitiesStorage.fetch(request.getId());
+        Future<List<CriteriaStatistics>> criteriaLoader = criteriaStorage.fetchStatistics(request.getId(), request.getCriteriaValues());
+        Future<Map<String, GroupTotalStats>> groupLoader = groupStatisticsStorage.fetchTotalStats(request.getId());
+
+        System.out.println("CriteriaProbabilitiesHandler-REQUESTS_ISSUED" + request.getId());
         CompositeFuture.all(generalLoader, criteriaLoader, groupLoader)
             .setHandler(loaded -> {
+                System.out.println("CriteriaProbabilitiesHandler-RESPONSE" + request.getId());
                 if (loaded.failed()) {
                     loaded.cause().printStackTrace();
+                    System.out.println("CriteriaProbabilitiesHandler-FAIL" + request.getId());
                     message.fail(500, loaded.cause().getMessage());
                     return;
                 }
@@ -62,6 +67,7 @@ public class CriteriaProbabilitiesHandler implements Handler<Message<Object>> {
 
                 ProbabilityStatistics result = buildProbabilityStatistics(request.getCriteriaValues(), general, criteria, group);
 
+                System.out.println("CriteriaProbabilitiesHandler-REPLY" + request.getId());
                 message.reply(result);
             });
     }

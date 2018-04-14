@@ -32,7 +32,9 @@ public class NamedCriteria<T> implements Criteria {
 
     public EvaluationResult evaluate(Transaction transaction, HistoricalData stats) {
         MapperResult<T> result = mapper.transform(transaction, stats);
-        return new EvaluationResult(calculator.evaluate(result.getOperationInput()), result.getBehaviourData());
+        PrintableResult evaluationResult = calculator.evaluate(result.getOperationInput());
+
+        return new EvaluationResult(evaluationResult, result.getBehaviourData());
     }
 
     // TODO: Could be refactored into common factory

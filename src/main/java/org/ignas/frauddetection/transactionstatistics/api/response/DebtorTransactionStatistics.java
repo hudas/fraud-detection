@@ -1,5 +1,6 @@
 package org.ignas.frauddetection.transactionstatistics.api.response;
 
+import com.google.common.collect.ImmutableList;
 import org.ignas.frauddetection.shared.Location;
 import org.joda.time.LocalDateTime;
 
@@ -33,6 +34,21 @@ public class DebtorTransactionStatistics {
         this.lastTransactionExecutionTime = lastTransactionExecutionTime;
         this.periodicStatistics = periodicStatistics;
         this.minTimeBetweenTransactions = minTimeBetweenTransactions;
+    }
+
+    public static DebtorTransactionStatistics unknown() {
+        return new DebtorTransactionStatistics(
+            null,
+            null,
+            0,
+            null,
+            Integer.MAX_VALUE,
+            ImmutableList.of(
+                new PersonalPeriod(1, 0, 0),
+                new PersonalPeriod(7, 0, 0),
+                new PersonalPeriod(30, 0, 0)
+            )
+        );
     }
 
     public Location getMostUsedLocation() {

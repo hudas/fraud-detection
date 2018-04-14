@@ -51,8 +51,8 @@ public class PublicStatisticsUpdater extends AbstractVerticle {
                 squaredDistanceFromLastIncrement += distanceFromLast * distanceFromLast;
 
                 float distanceFromCommon = data.getDistanceFromLast();
-                distanceFromLastIncrement += distanceFromCommon;
-                squaredDistanceFromLastIncrement += distanceFromCommon * distanceFromCommon;
+                distanceFromCommonIncrement += distanceFromCommon;
+                squaredDistanceFromCommonIncrement += distanceFromCommon * distanceFromCommon;
             }
 
             long additionalInstances = batch.getItems().size();

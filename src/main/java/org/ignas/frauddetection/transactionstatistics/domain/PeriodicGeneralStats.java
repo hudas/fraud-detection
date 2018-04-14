@@ -13,6 +13,12 @@ public class PeriodicGeneralStats {
     }
 
     public PeriodStats get(String type, String period) {
-        return statsMap.get(type).get(period);
+        Map<String, PeriodStats> stats = statsMap.get(type);
+
+        if (stats == null) {
+            return new PeriodStats(0f, 0f, 0l);
+        }
+
+        return stats.get(period);
     }
 }

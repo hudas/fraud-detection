@@ -135,6 +135,10 @@ public class TransactionStatisticArchive extends AbstractVerticle {
     }
 
     private DebtorTransactionStatistics buildDebtorStats(PersonalStats personalStats) {
+        if (personalStats == null) {
+            return DebtorTransactionStatistics.unknown();
+        }
+
         Location latestLocation = personalStats.getLatestTransaction().getLocation();
 
         Optional<Map.Entry<String, Long>> mostUsedLocation = personalStats.getLocationOccurences()
@@ -172,6 +176,14 @@ public class TransactionStatisticArchive extends AbstractVerticle {
     }
 
     private CredibilityScore buildScore(ConditionStats<?> creditor) {
+        if (creditor.getInstances() == 0) {
+            return new CredibilityScore(
+                creditor.getMatchingValue(),
+                0,
+                0
+            );
+        }
+
         float average = calcAverage(creditor.getValuesSum(), creditor.getInstances());
         float deviation = calcDeviation(creditor.getInstances(), average, creditor.getValuesSum(), creditor.getValuesSquaredSum());
 
@@ -183,6 +195,10 @@ public class TransactionStatisticArchive extends AbstractVerticle {
     }
 
     private TimeDifferenceStatistics buildTimeDiff(NonPeriodicGeneralStats nonPeriodicStats) {
+        if (nonPeriodicStats.getInstances() == 0) {
+            return new TimeDifferenceStatistics(0f, 0f);
+        }
+
         float averageTimeDiff = calcAverage((float) nonPeriodicStats.getSumOfTimeDiffFromLast(), nonPeriodicStats.getInstances());
         float deviationTimeDiff = calcDeviation(nonPeriodicStats.getInstances(), averageTimeDiff, nonPeriodicStats.getSumOfTimeDiffFromLast(), nonPeriodicStats.getSumOfSquaredTimeDiffFromLast());
 
@@ -190,6 +206,10 @@ public class TransactionStatisticArchive extends AbstractVerticle {
     }
 
     private DistanceDifferenceStatistics buildLastDistanceDiff(NonPeriodicGeneralStats nonPeriodicStats) {
+        if (nonPeriodicStats.getInstances() == 0) {
+            return new DistanceDifferenceStatistics(0f, 0f);
+        }
+
         float averageDistanceLast = calcAverage(nonPeriodicStats.getSumOfDistanceFromLast(), nonPeriodicStats.getInstances());
         float deviationDistanceLast = calcDeviation(nonPeriodicStats.getInstances(), averageDistanceLast, nonPeriodicStats.getSumOfDistanceFromLast(), nonPeriodicStats.getSumOfSquaredTimeDiffFromLast());
 
@@ -197,6 +217,11 @@ public class TransactionStatisticArchive extends AbstractVerticle {
     }
 
     private DistanceDifferenceStatistics buildCommonDistanceDiff(NonPeriodicGeneralStats nonPeriodicStats) {
+        if (nonPeriodicStats.getInstances() == 0) {
+            return new DistanceDifferenceStatistics(0f, 0f);
+        }
+
+
         float averageDistanceCommon = calcAverage(nonPeriodicStats.getSumOfDistanceFromLast(), nonPeriodicStats.getInstances());
         float deviationDistanceCommon = calcDeviation(nonPeriodicStats.getInstances(), averageDistanceCommon, nonPeriodicStats.getSumOfDistanceFromComm(), nonPeriodicStats.getSumOfSquaredDistanceFromComm());
 
@@ -204,6 +229,10 @@ public class TransactionStatisticArchive extends AbstractVerticle {
     }
 
     private RatioStatistics buildRatioStatsForPeriod(PeriodStats stats, int length) {
+        if (stats.getInstances() == 0) {
+            return new RatioStatistics(length, 0f, 0f);
+        }
+
         float averageDailySum = calcAverage(stats.getValueSum(), stats.getInstances());
         float deviationDailySum = calcDeviation(stats.getInstances(), averageDailySum, stats.getValueSum(), stats.getValueSumSquared());
 
@@ -212,6 +241,10 @@ public class TransactionStatisticArchive extends AbstractVerticle {
 
 
     private CountStatistics buildCountStatsForPeriod(PeriodStats stats, int periodLength) {
+        if (stats.getInstances() == 0) {
+            return new CountStatistics(periodLength, 0f, 0f);
+        }
+
         float averageDailySum = calcAverage(stats.getValueSum(), stats.getInstances());
         float deviationDailySum = calcDeviation(stats.getInstances(), averageDailySum, stats.getValueSum(), stats.getValueSumSquared());
 
@@ -219,6 +252,10 @@ public class TransactionStatisticArchive extends AbstractVerticle {
     }
 
     private SumStatistics buildSumStatsForPeriod(PeriodStats stats, int periodLength) {
+        if (stats.getInstances() == 0) {
+            return new SumStatistics(periodLength, 0f, 0f);
+        }
+
         float average = calcAverage(stats.getValueSum(), stats.getInstances());
         float deviation = calcDeviation(stats.getInstances(), average, stats.getValueSum(), stats.getValueSumSquared());
 

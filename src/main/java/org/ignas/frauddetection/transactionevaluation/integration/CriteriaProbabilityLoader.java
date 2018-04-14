@@ -25,11 +25,25 @@ public class CriteriaProbabilityLoader implements ServiceIntegration<Map<String,
     public Future<ProbabilityStatistics> load(Map<String, String> request) {
         Future<ProbabilityStatistics> loader = Future.future();
 
-        bus.send(ARCHIVE_ADDRESS, new CriteriaProbabilityRequest(request), criteriaResponse -> {
+        long fakeId = System.currentTimeMillis();
+        System.out.println("CriteriaProbabilityLoader-START-" + fakeId);
+
+        bus.send(ARCHIVE_ADDRESS, new CriteriaProbabilityRequest(fakeId, request), criteriaResponse -> {
+
+            if (criteriaResponse.failed()) {
+                System.out.println("CriteriaProbabilityLoader-FAILED-" + fakeId + " MESSAGE: " + criteriaResponse.cause().getMessage());
+                criteriaResponse.cause().printStackTrace();
+                loader.fail(criteriaResponse.cause());
+                return;
+            }
+
+
             if (!(criteriaResponse.result().body() instanceof ProbabilityStatistics)) {
                 loader.fail("Unsupported message type: " + criteriaResponse.result().getClass());
                 return;
             }
+
+            System.out.println("CriteriaProbabilityLoader-COMPLETED-" + fakeId);
 
             loader.complete((ProbabilityStatistics) criteriaResponse.result().body());
         });

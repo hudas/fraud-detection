@@ -13,7 +13,12 @@ public class DeviationEvaluator implements Evaluator<DeviationStatistics> {
 
     @Override
     public ValueExpectancy evaluate(DeviationStatistics transaction) {
-        Float rateOfDeviationFromAverage = (transaction.getValue() - transaction.getAverageValue())
+        // First transaction, no previous known data.
+        if (transaction.getAverageValue() == 0f || transaction.getDeviationFromAverage() == 0f) {
+            return ValueExpectancy.EXPECTED;
+        }
+
+        float rateOfDeviationFromAverage = (transaction.getValue() - transaction.getAverageValue())
                 / transaction.getDeviationFromAverage();
 
         return Arrays.stream(ValueExpectancy.values())

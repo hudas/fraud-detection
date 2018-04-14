@@ -31,6 +31,13 @@ public class NonPeriodicGeneralStats {
         this.instances = instances;
     }
 
+    public static NonPeriodicGeneralStats unknown() {
+        return new NonPeriodicGeneralStats(
+            0,0,0,
+            0f, 0f, 0f, 0f
+        );
+    }
+
     public long getSumOfTimeDiffFromLast() {
         return sumOfTimeDiffFromLast;
     }

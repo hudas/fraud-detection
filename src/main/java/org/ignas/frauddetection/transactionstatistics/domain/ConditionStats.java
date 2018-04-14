@@ -3,13 +3,13 @@ package org.ignas.frauddetection.transactionstatistics.domain;
 public class ConditionStats<T> {
 
     private float matchingValue;
+
     private float valuesSum;
     private float valuesSquaredSum;
-
     private Long instances;
 
-    public ConditionStats(float matchingValue, float valuesSum, float valuesSquaredSum, Long instances) {
-        this.matchingValue = matchingValue;
+    public ConditionStats(float conditionRisk, float valuesSum, float valuesSquaredSum, Long instances) {
+        this.matchingValue = conditionRisk;
         this.valuesSum = valuesSum;
         this.valuesSquaredSum = valuesSquaredSum;
         this.instances = instances;

@@ -33,6 +33,13 @@ public class FraudProbabilityLoader implements ServiceIntegration<List<String>, 
         Future<Map<String, CriteriaGroup>> loader = Future.future();
 
         bus.send(PROBABILITY_STATISTIC_ADDRESS, mapRequest(groups), (reply) -> {
+            if (reply.failed()) {
+                System.out.println("FraudProbabilityLoader" + reply.cause().getMessage());
+                reply.cause().printStackTrace();
+                loader.fail(reply.cause());
+                return;
+            }
+
             if (!(reply.result().body() instanceof BayesTable)) {
                 loader.fail("Unsupported message type: " + reply.result().getClass());
                 return;

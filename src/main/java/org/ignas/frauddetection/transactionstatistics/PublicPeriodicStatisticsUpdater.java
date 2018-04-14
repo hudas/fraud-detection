@@ -16,6 +16,7 @@ import org.joda.time.LocalDateTime;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
 
@@ -180,20 +181,26 @@ public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
         float dailySquaredCountDiff = 0;
 
         for (PeriodIncrement increment : increments) {
-            DebtorPeriodValue oldValue = oldValues.stream()
+            Optional<DebtorPeriodValue> optionalOldValue = oldValues.stream()
                 .filter(value -> value.matches(increment))
-                .findAny()
-                .orElseThrow(IllegalStateException::new);
+                .findAny();
 
-            float oldSquaredSum = oldValue.getSum() * oldValue.getSum();
-            float newSquaredSum = (oldValue.getSum() + increment.getAmount()) * (oldValue.getSum() + increment.getAmount());
+            if (optionalOldValue.isPresent()) {
+                DebtorPeriodValue oldValue = optionalOldValue.get();
 
-            dailySquaredSumDiff += newSquaredSum - oldSquaredSum;
+                float oldSquaredSum = oldValue.getSum() * oldValue.getSum();
+                float newSquaredSum = (oldValue.getSum() + increment.getAmount()) * (oldValue.getSum() + increment.getAmount());
 
-            float oldSquaredCount = oldValue.getCount() * oldValue.getCount();
-            float newSquaredCount = (oldValue.getCount() + increment.getCount()) * (oldValue.getCount() + increment.getCount());
+                dailySquaredSumDiff += newSquaredSum - oldSquaredSum;
 
-            dailySquaredCountDiff += oldSquaredCount - newSquaredCount;
+                float oldSquaredCount = oldValue.getCount() * oldValue.getCount();
+                float newSquaredCount = (oldValue.getCount() + increment.getCount()) * (oldValue.getCount() + increment.getCount());
+
+                dailySquaredCountDiff += oldSquaredCount - newSquaredCount;
+            } else {
+                dailySquaredSumDiff += increment.getAmount() * increment.getAmount();
+                dailySquaredCountDiff += increment.getCount() * increment.getCount();
+            }
         }
 
         return new SquaredIncrement(dailySquaredSumDiff, dailySquaredCountDiff);

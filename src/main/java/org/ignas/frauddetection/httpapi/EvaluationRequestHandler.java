@@ -18,7 +18,7 @@ public class EvaluationRequestHandler implements Handler<RoutingContext> {
     public EvaluationRequestHandler(
         ServiceIntegration<EvaluationRequest, Float> probabilityCalculator,
         OneWayServiceIntegration<ResultLoggingRequest> resultLogger) {
-        
+
         this.probabilityCalculator = probabilityCalculator;
         this.resultLogger = resultLogger;
     }
@@ -35,6 +35,8 @@ public class EvaluationRequestHandler implements Handler<RoutingContext> {
                 result -> {
                     if (result.failed()){
                         req.fail(500);
+                        result.cause().printStackTrace();
+                        System.out.println(result.cause().getMessage());
                         return;
                     }
 

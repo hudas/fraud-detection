@@ -60,7 +60,7 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
                     throw new IllegalArgumentException("Invalid message type: " + batchEvent.body().getClass());
                 }
 
-                Future<GeneralOccurrences> statsLoader = generalProbabilities.fetch();
+                Future<GeneralOccurrences> statsLoader = generalProbabilities.fetch(1);
 
                 BatchToProcess batch = (BatchToProcess) batchEvent.body();
 
@@ -97,7 +97,8 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
                         .forEach(future ->
                             future.setHandler(statsLoaded -> {
                                 if (result.failed()) {
-                                    throw new IllegalStateException();
+                                    result.cause().printStackTrace();
+                                    throw new IllegalStateException(result.cause());
                                 }
 
                                 beforeUpdateStatistics.add(statsLoaded.result());
@@ -112,15 +113,16 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
 
                         statsLoader.setHandler(totalStatsLoaded -> {
                             if (totalStatsLoaded.failed()) {
-                                throw new IllegalStateException("Failed to load stats");
+                                throw new IllegalStateException("Failed to load stats", totalStatsLoaded.cause());
                             }
 
                             GeneralOccurrences occurences = totalStatsLoaded.result();
 
-                            Future<Map<String, GroupTotalStats>> totalStatsLoader = storage.fetchTotalStats();
+                            Future<Map<String, GroupTotalStats>> totalStatsLoader = storage.fetchTotalStats(1);
 
                             totalStatsLoader.setHandler(groupStatsLoaded -> {
                                 if (groupStatsLoaded.failed()) {
+                                    groupStatsLoaded.cause().printStackTrace();
                                     throw new IllegalStateException(groupStatsLoaded.cause().getMessage());
                                 }
 

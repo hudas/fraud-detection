@@ -157,13 +157,13 @@ public class GeneralPeriodicTransactionsStorage {
 
                 },
                 (result, t) -> {
-                if (t != null) {
-                    t.printStackTrace();
-                    future.fail(t);
-                    return;
-                }
+                    if (t != null) {
+                        t.printStackTrace();
+                        future.fail(t);
+                        return;
+                    }
 
-                future.complete(generalStats);
+                    future.complete(generalStats);
             });
 
         return future;
@@ -215,12 +215,12 @@ public class GeneralPeriodicTransactionsStorage {
     }
 
     private UpdateOneModel<Document> buildInitPeriodQuery(PeriodIncrement it) {
-        Document emptyDoc = new Document(START_FIELD, it.getStart())
-            .append(END_FIELD, it.getEnd())
+        Document emptyDoc = new Document(START_FIELD, it.getStart().toString())
+            .append(END_FIELD, it.getEnd().toString())
             .append(DEBTORS_OBJECT, new ArrayList<>());
 
         return new UpdateOneModel<Document>(
-            and(eq(START_FIELD, it.getStart()), eq(END_FIELD, it.getEnd())),
+            and(eq(START_FIELD, it.getStart().toString()), eq(END_FIELD, it.getEnd().toString())),
             new Document("$setOnInsert", emptyDoc),
             new UpdateOptions().upsert(true)
         );
@@ -232,8 +232,8 @@ public class GeneralPeriodicTransactionsStorage {
 
         return new UpdateOneModel<Document>(
             and(
-                eq(START_FIELD, it.getStart()),
-                eq(END_FIELD, it.getEnd()),
+                eq(START_FIELD, it.getStart().toString()),
+                eq(END_FIELD, it.getEnd().toString()),
                 not(elemMatch(DEBTORS_OBJECT, eq(ID_FIELD, it.getDebtor())))
             ),
             new Document("$addToSet", emptyDebtor)
@@ -243,8 +243,8 @@ public class GeneralPeriodicTransactionsStorage {
     private UpdateOneModel<Document> buildAddAmountQuery(PeriodIncrement it) {
         return new UpdateOneModel<Document>(
             and(
-                eq(START_FIELD, it.getStart()),
-                eq(END_FIELD, it.getEnd()),
+                eq(START_FIELD, it.getStart().toString()),
+                eq(END_FIELD, it.getEnd().toString()),
                 eq(DEBTORS_ID_FIELD, it.getDebtor())
             ),
             new Document("$push", new Document("debtors.$.amounts", it.getAmount()))
@@ -259,9 +259,9 @@ public class GeneralPeriodicTransactionsStorage {
         List<Bson> filters = increments.stream()
             .map(increment ->
                 and(
-                    eq(START_FIELD, increment.getStart()),
-                    eq(END_FIELD, increment.getEnd()),
-                    eq(DEBTORS_ID_FIELD, increment.getDebtor())
+                    eq(START_FIELD, increment.getStart().toString()),
+                    eq(END_FIELD, increment.getEnd().toString()),
+                    eq("debtors.$.id", increment.getDebtor())
                 )
             )
             .collect(Collectors.toList());
@@ -276,8 +276,8 @@ public class GeneralPeriodicTransactionsStorage {
                 Float sum = amounts.stream().reduce(0f, Float::sum);
 
                 oldValues.add(new DebtorPeriodValue(
-                    LocalDateTime.fromDateFields(document.getDate(START_FIELD)),
-                    LocalDateTime.fromDateFields(document.getDate(END_FIELD)),
+                    LocalDateTime.parse(document.getString(START_FIELD)),
+                    LocalDateTime.parse(document.getString(END_FIELD)),
                     document.getString("debtors.id"),
                     sum,
                     amounts.size()
@@ -301,7 +301,7 @@ public class GeneralPeriodicTransactionsStorage {
         int newInstances,
         TotalIncrement inc) {
 
-        Document increment = new Document(INSTANCES_FIELD, newInstances)
+        Document increment = new Document(INSTANCES_FIELD, (long) newInstances)
             .append(VALUE_SUM_FIELD, inc.getValueIncrease())
             .append(VALUE_SQUARED_SUM_FIELD, inc.getValueIncreaseSquared());
 

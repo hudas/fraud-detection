@@ -73,6 +73,11 @@ public class GeneralTransactionsStorage {
                 return;
             }
 
+            if (result == null) {
+                loader.complete(NonPeriodicGeneralStats.unknown());
+                return;
+            }
+
             NonPeriodicGeneralStats stats = new NonPeriodicGeneralStats(
                 result.getLong(INSTANCES_FIELD),
                 result.getLong(TIME_DIFFERENCE),

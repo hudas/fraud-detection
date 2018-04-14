@@ -21,8 +21,6 @@ public class ProbabilityStatisticsProcessor extends AbstractVerticle {
 
         EventBus bus = vertx.eventBus();
 
-        bus.registerDefaultCodec(BatchToProcess.class, new ImmutableObjectCodec<BatchToProcess>(BatchToProcess.class));
-
         bus.consumer("learning.processing-request")
             .handler(message -> {
                 if (!(message.body() instanceof LearningRequest)) {

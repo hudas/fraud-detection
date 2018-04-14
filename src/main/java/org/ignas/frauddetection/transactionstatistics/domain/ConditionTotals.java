@@ -6,6 +6,16 @@ public class ConditionTotals {
     private ConditionTotalValue timeTotal;
     private ConditionTotalValue locationTotal;
 
+    public static ConditionTotals unknown() {
+        ConditionTotals totals = new ConditionTotals();
+
+        totals.setCreditorTotal(ConditionTotalValue.unknown());
+        totals.setTimeTotal(ConditionTotalValue.unknown());
+        totals.setLocationTotal(ConditionTotalValue.unknown());
+
+        return totals;
+    }
+
     public void setCreditorTotal(ConditionTotalValue creditorTotal) {
         this.creditorTotal = creditorTotal;
     }
