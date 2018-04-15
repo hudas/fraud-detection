@@ -46,4 +46,9 @@ public class GeneralDataUpdater extends AbstractVerticle {
             bus.publish("probability-processing.general-data-updated", batch);
         });
     }
+
+    @Override
+    public void stop() {
+        probabilitiesStorage.close();
+    }
 }

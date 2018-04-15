@@ -60,4 +60,9 @@ public class EvaluationArchive extends AbstractVerticle {
                     });
             });
     }
+
+    @Override
+    public void stop() {
+        resultStorage.close();
+    }
 }

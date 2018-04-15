@@ -37,27 +37,22 @@ public class GeneralProbabilitiesStorage {
     }
 
     public Future<GeneralOccurrences> fetch(long id) {
-        System.out.println("GeneralProbabilitiesStorage-FETCH-START" + id);
-
         Future<GeneralOccurrences> loader = Future.future();
 
         generalProbabilities.find()
             .first((result, t) -> {
             if (t != null) {
                 System.out.println(t.getMessage());
-                System.out.println("GeneralProbabilitiesStorage-FETCH-FAIL" + id);
                 loader.fail(t);
                 return;
             }
 
 //            Initial system launch, without data yet available
             if (result == null) {
-                System.out.println("GeneralProbabilitiesStorage-FETCH-STOP" + id);
                 loader.complete(new GeneralOccurrences(0, 0));
                 return;
             }
 
-            System.out.println("GeneralProbabilitiesStorage-FETCH-STOP" + id);
             loader.complete(
                 new GeneralOccurrences(
                     result.getLong("totalTransactions"),

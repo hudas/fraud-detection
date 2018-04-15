@@ -165,5 +165,6 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
     @Override
     public void stop() {
         storage.close();
+        generalProbabilities.close();
     }
 }

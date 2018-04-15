@@ -176,6 +176,11 @@ public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
         });
     }
 
+    @Override
+    public void stop() {
+        periodicStorage.close();
+    }
+
     public SquaredIncrement periodSquaredIncrement(List<PeriodIncrement> increments, List<DebtorPeriodValue> oldValues) {
         float dailySquaredSumDiff = 0;
         float dailySquaredCountDiff = 0;

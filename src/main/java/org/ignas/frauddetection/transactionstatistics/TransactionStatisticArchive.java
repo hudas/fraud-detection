@@ -134,6 +134,14 @@ public class TransactionStatisticArchive extends AbstractVerticle {
             });
     }
 
+    @Override
+    public void stop() throws Exception {
+        this.conditionStorage.stop();
+        this.generalTransactionsStorage.close();
+        this.generalPeriodicTransactionsStorage.close();
+        this.personalStatistics.close();
+    }
+
     private DebtorTransactionStatistics buildDebtorStats(PersonalStats personalStats) {
         if (personalStats == null) {
             return DebtorTransactionStatistics.unknown();

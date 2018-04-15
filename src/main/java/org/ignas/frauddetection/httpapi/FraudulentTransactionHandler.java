@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
 import org.ignas.frauddetection.httpapi.request.EvaluationRequest;
+import org.ignas.frauddetection.httpapi.request.MarkRequest;
 import org.ignas.frauddetection.resultsanalyser.api.ResultLoggingRequest;
 import org.ignas.frauddetection.shared.OneWayServiceIntegration;
 import org.ignas.frauddetection.shared.ServiceIntegration;
@@ -19,8 +20,8 @@ public class FraudulentTransactionHandler implements Handler<RoutingContext> {
 
     @Override
     public void handle(RoutingContext req) {
-        String fraudulentTransactionId = req.getBodyAsString();
+        MarkRequest request = req.getBodyAsJson().mapTo(MarkRequest.class);
 
-        preparationIntegration.publish(fraudulentTransactionId);
+        preparationIntegration.publish(request.getTransactionId());
     }
 }

@@ -24,10 +24,6 @@ import static java.lang.String.join;
 
 public class ConditionStorage {
 
-    private static final String CREDITORS_OBJECT = "creditors";
-    private static final String LOCATIONS_OBJECT = "locations";
-    private static final String TIMES_OBJECT = "times";
-
     private static final String ID_FIELD = "id";
 
     private static final String TOTAL_OCCURRENCES_FIELD = "totalOccurrences";
@@ -48,6 +44,10 @@ public class ConditionStorage {
 
     private MongoCollection<Document> conditionTotals;
 
+    public void stop() {
+        client.close();
+    }
+
     public ConditionStorage(String url, String database) {
         client = MongoClients.create(url);
 
@@ -63,6 +63,8 @@ public class ConditionStorage {
     }
 
     public Future<ExternalConditions> fetchOccurrences(String creditor, org.joda.time.LocalDateTime hour, Location location) {
+        long start = System.currentTimeMillis();
+
         Future<ConditionOccurrences> creditorLoader = Future.future();
         creditorsConditions.find(Filters.eq(ID_FIELD, creditor))
             .first((result, t) -> {
@@ -172,26 +174,12 @@ public class ConditionStorage {
                 ConditionStats timeStats = buildStats(timeOccurrences, totalStats.getTimeTotal());
                 ConditionStats locationStats = buildStats(locationOccurrences, totalStats.getLocationTotal());
 
+                long end = System.currentTimeMillis();
+                System.out.println("ConditionStorage.fetchOccurrences took: " + (end - start));
                 future.complete(new ExternalConditions(creditorStats, timeStats, locationStats));
             });
 
         return future;
-    }
-
-    private ConditionStats buildStats(ConditionOccurrences<?> occurrences, ConditionTotalValue totalValue) {
-        final Float valueRisk;
-        if (occurrences.getOccurrences() == 0) {
-            valueRisk = 0f;
-        } else {
-            valueRisk = ((float) occurrences.getFraudOccurrences()) / occurrences.getOccurrences();
-        }
-
-        return new ConditionStats(
-            valueRisk,
-            totalValue.getSumOfValues(),
-            totalValue.getSumOfSquaredValues(),
-            totalValue.getInstances()
-        );
     }
 
     /**
@@ -297,6 +285,22 @@ public class ConditionStorage {
                         }
                 });
             });
+    }
+
+    private ConditionStats buildStats(ConditionOccurrences<?> occurrences, ConditionTotalValue totalValue) {
+        final Float valueRisk;
+        if (occurrences.getOccurrences() == 0) {
+            valueRisk = 0f;
+        } else {
+            valueRisk = ((float) occurrences.getFraudOccurrences()) / occurrences.getOccurrences();
+        }
+
+        return new ConditionStats(
+            valueRisk,
+            totalValue.getSumOfValues(),
+            totalValue.getSumOfSquaredValues(),
+            totalValue.getInstances()
+        );
     }
 
     private UpdateOneModel<Document> buildTotalIncrease(ConditionTotalIncrement creditor) {

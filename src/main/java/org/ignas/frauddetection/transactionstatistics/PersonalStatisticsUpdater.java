@@ -6,6 +6,8 @@ import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.probabilitystatistics.domain.PersonalStats;
+import org.ignas.frauddetection.probabilitystatistics.service.repositories.GeneralProbabilitiesStorage;
+import org.ignas.frauddetection.probabilitystatistics.service.repositories.GroupStatisticsStorage;
 import org.ignas.frauddetection.probabilitystatistics.service.repositories.PersonalStatisticsStorage;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
 
@@ -48,5 +50,9 @@ public class PersonalStatisticsUpdater extends AbstractVerticle {
 
             bus.publish("transaction-processing.personal-data-updated", batch);
         });
+    }
+
+    public void stop() {
+        personalStatistics.close();
     }
 }

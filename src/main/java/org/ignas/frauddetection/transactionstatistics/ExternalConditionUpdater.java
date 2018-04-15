@@ -85,4 +85,9 @@ public class ExternalConditionUpdater extends AbstractVerticle {
             bus.publish("transaction-processing.conditions-updated", batch);
         });
     }
+
+    @Override
+    public void stop() throws Exception {
+        conditionStorage.stop();
+    }
 }

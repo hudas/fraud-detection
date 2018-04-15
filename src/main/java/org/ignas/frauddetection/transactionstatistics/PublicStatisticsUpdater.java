@@ -68,4 +68,9 @@ public class PublicStatisticsUpdater extends AbstractVerticle {
             bus.publish("transaction-processing.public-non-periodic-data-updated", batch);
         });
     }
+
+    @Override
+    public void stop() {
+        nonPeriodicTransactionsStorage.close();
+    }
 }

@@ -19,16 +19,16 @@ import org.ignas.frauddetection.shared.OneWayServiceIntegration;
 public class EvaluationRequestController extends AbstractVerticle {
 
     public static final int DEFAULT_TIMEOUT = 1000;
-    public static final int SERVER_PORT = 8080;
+    public static final int SERVER_PORT = 8081;
 
     @Override
     public void start(Future<Void> verticeStartup) {
         registerDateMapper();
 
         new ConfigurationProvider(vertx)
-            .loadApiSchema()
-            .setHandler(validationSchema -> {
-                Router router = buildRouter(validationSchema.result());
+            .loadApiSchemas()
+            .setHandler(validationSchemas -> {
+                Router router = buildRouter(validationSchemas.result());
 
                 vertx.createHttpServer()
                     .requestHandler(router::accept)
@@ -40,14 +40,14 @@ public class EvaluationRequestController extends AbstractVerticle {
             });
     }
 
-    private Router buildRouter(String requestSchema) {
+    private Router buildRouter(APISchemas schemas) {
         EventBus bus = vertx.eventBus();
 
         Router router = Router.router(vertx);
 
-        router.route(HttpMethod.POST, "/evaluate-fraud/:transactionId")
+        router.route(HttpMethod.POST, "/evaluate-fraud")
             .handler(BodyHandler.create())
-            .handler(HTTPRequestValidationHandler.create().addJsonBodySchema(requestSchema))
+            .handler(HTTPRequestValidationHandler.create().addJsonBodySchema(schemas.getEvaluationSchema()))
             .handler(TimeoutHandler.create(DEFAULT_TIMEOUT, 500))
             .handler(
                 new EvaluationRequestHandler(
@@ -56,10 +56,10 @@ public class EvaluationRequestController extends AbstractVerticle {
             )
             .failureHandler(new EvaluationRequestFailureHandler());
 
-        router.route(HttpMethod.POST, "/mark-fraudulent/:transactionId")
+        router.route(HttpMethod.POST, "/mark-fraudulent")
             .handler(BodyHandler.create())
-            .handler(HTTPRequestValidationHandler.create().addJsonBodySchema(requestSchema))
             .handler(TimeoutHandler.create(DEFAULT_TIMEOUT, 500))
+            .handler(HTTPRequestValidationHandler.create().addJsonBodySchema(schemas.getMarkingSchema()))
             .handler(
                 new FraudulentTransactionHandler(request -> bus.publish("evaluation-archive.marked-fraudulent", request))
             )

@@ -54,6 +54,14 @@ public class ProbabilityStatisticsArchive extends AbstractVerticle {
     }
 
 
+    @Override
+    public void stop() {
+        groupStorage.close();
+        generalProbabilitiesStorage.close();
+        groupStatisticsStorage.close();
+        criteriaStorage.close();
+    }
+
 
     private void registerAPICodecs() {
         vertx.eventBus().registerDefaultCodec(

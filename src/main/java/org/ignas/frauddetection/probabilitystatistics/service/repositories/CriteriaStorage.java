@@ -40,6 +40,8 @@ public class CriteriaStorage {
     }
 
     public Future<List<CriteriaStatistics>> fetchValues(List<String> names) {
+        long start = System.currentTimeMillis();
+
 //      Collect filters and join using OR condition, this way preventing multiple roundtrips to DB.
         List<Bson> nameFilters = names.stream()
             .map(name -> Filters.eq("name", name))
@@ -59,6 +61,8 @@ public class CriteriaStorage {
                         return;
                     }
 
+                    long end = System.currentTimeMillis();
+                    System.out.println("CriteriaStorage.fetchValues took:" + (end - start));
                     loader.complete(statisticsResult);
                 });
 
@@ -66,7 +70,7 @@ public class CriteriaStorage {
     }
 
     public Future<List<CriteriaStatistics>> fetchStatistics(long id, Map<String, String> criteriaValues) {
-        System.out.println("CriteriaStorage-FETCH-START" + id);
+        long start = System.currentTimeMillis();
 
         Future<List<CriteriaStatistics>> totalLoader = Future.future();
 
@@ -89,7 +93,9 @@ public class CriteriaStorage {
                 loadedStatistics.add(criteriaResult.result());
 
                 if (loadedStatistics.size() == criteriaToLoad) {
-                    System.out.println("CriteriaStorage-FETCH-ALL-");
+                    long end = System.currentTimeMillis();
+
+                    System.out.println("CriteriaStorage.fetchStatistics took:" + (end - start));
                     totalLoader.complete(loadedStatistics);
                 }
             }));

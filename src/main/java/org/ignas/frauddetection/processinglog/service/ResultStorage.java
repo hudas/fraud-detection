@@ -63,6 +63,9 @@ public class ResultStorage {
         return loader;
     }
 
+    public void close() {
+        client.close();
+    }
 
     public Future<Void> storeLog(LearningRequest request) {
         Document document = new Document("id", request.getTransaction().getTransactionId())
