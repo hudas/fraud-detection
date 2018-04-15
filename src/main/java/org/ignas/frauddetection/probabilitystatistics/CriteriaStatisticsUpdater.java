@@ -60,7 +60,7 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
                     throw new IllegalArgumentException("Invalid message type: " + batchEvent.body().getClass());
                 }
 
-                Future<GeneralOccurrences> statsLoader = generalProbabilities.fetch(1);
+                Future<GeneralOccurrences> statsLoader = generalProbabilities.fetch("a");
 
                 BatchToProcess batch = (BatchToProcess) batchEvent.body();
 
@@ -118,7 +118,7 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
 
                             GeneralOccurrences occurences = totalStatsLoaded.result();
 
-                            Future<Map<String, GroupTotalStats>> totalStatsLoader = storage.fetchTotalStats(1);
+                            Future<Map<String, GroupTotalStats>> totalStatsLoader = storage.fetchTotalStats("A");
 
                             totalStatsLoader.setHandler(groupStatsLoaded -> {
                                 if (groupStatsLoaded.failed()) {

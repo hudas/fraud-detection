@@ -175,7 +175,7 @@ public class ConditionStorage {
                 ConditionStats locationStats = buildStats(locationOccurrences, totalStats.getLocationTotal());
 
                 long end = System.currentTimeMillis();
-                System.out.println("ConditionStorage.fetchOccurrences took: " + (end - start));
+//                System.out.println("ConditionStorage.fetchOccurrences took: " + (end - start));
                 future.complete(new ExternalConditions(creditorStats, timeStats, locationStats));
             });
 

@@ -64,6 +64,8 @@ public class GeneralTransactionsStorage {
     }
 
     public Future<NonPeriodicGeneralStats> fetchNonPeriodicStats() {
+        long start = System.currentTimeMillis();
+
         Future<NonPeriodicGeneralStats> loader = Future.future();
 
         nonPeriodicGeneralStatistics.find().first((result, t) -> {
@@ -88,6 +90,8 @@ public class GeneralTransactionsStorage {
                 result.getDouble(SQUARED_DISTANCE_COMMON).floatValue()
             );
 
+            long end = System.currentTimeMillis();
+            System.out.println("GeneralProbabilitiesStorage.fetch" + (end - start));
             loader.complete(stats);
         });
 

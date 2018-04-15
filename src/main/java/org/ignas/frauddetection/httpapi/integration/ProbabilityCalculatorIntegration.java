@@ -1,6 +1,7 @@
 package org.ignas.frauddetection.httpapi.integration;
 
 import io.vertx.core.Future;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.httpapi.request.EvaluationRequest;
 import org.ignas.frauddetection.shared.ServiceIntegration;

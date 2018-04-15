@@ -8,6 +8,7 @@ import org.ignas.frauddetection.probabilitystatistics.api.response.ProbabilitySt
 import org.ignas.frauddetection.shared.OneWayServiceIntegration;
 import org.ignas.frauddetection.shared.ServiceIntegration;
 import org.ignas.frauddetection.transactionevaluation.api.request.BehaviourData;
+import org.ignas.frauddetection.transactionevaluation.api.request.CriteriaContainer;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
 import org.ignas.frauddetection.transactionevaluation.api.request.TransactionData;
 import org.ignas.frauddetection.transactionevaluation.cache.GroupProbabilityCache;
@@ -26,7 +27,7 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
 
     private GroupProbabilityCache cache;
     private ServiceIntegration<Transaction, HistoricalData> transactionStatisticsIntegration;
-    private ServiceIntegration<Map<String, String>, ProbabilityStatistics> criteriaProbabilityIntegration;
+    private ServiceIntegration<CriteriaContainer, ProbabilityStatistics> criteriaProbabilityIntegration;
 
     private static FraudCriteriaEvaluator criteriaEvaluator = new FraudCriteriaEvaluator();
     private static GroupRiskEvaluator evaluator = new GroupRiskEvaluator(criteriaEvaluator);
@@ -35,7 +36,7 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
     public FraudEvaluationHandler(
         GroupProbabilityCache cache,
         ServiceIntegration<Transaction, HistoricalData> transactionStatisticsIntegration,
-        ServiceIntegration<Map<String, String>, ProbabilityStatistics> criteriaProbabilityIntegration,
+        ServiceIntegration<CriteriaContainer, ProbabilityStatistics> criteriaProbabilityIntegration,
         OneWayServiceIntegration<LearningRequest> learningInitiationIntegration) {
 
         this.cache = cache;
@@ -77,7 +78,7 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
                 EvaluationResult distanceFromLast = evaluationResult.get("AVERAGE_DISTANCE_FROM_LAST_LOCATION");
                 EvaluationResult timeToLast = evaluationResult.get("MIN_TIME_BETWEEN_TRANSACTIONS");
 
-                Future<ProbabilityStatistics> probabilityStatistics = criteriaProbabilityIntegration.load(criteriaValues);
+                Future<ProbabilityStatistics> probabilityStatistics = criteriaProbabilityIntegration.load(new CriteriaContainer(requestData.getTransactionId(), criteriaValues));
 
                 probabilityStatistics.setHandler(probabilitiesLoaded -> {
                     if (probabilitiesLoaded.failed()) {

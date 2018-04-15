@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import org.ignas.frauddetection.probabilitystatistics.api.request.CriteriaProbabilityRequest;
 import org.ignas.frauddetection.probabilitystatistics.api.response.CriteriaGroupRisk;
@@ -44,19 +45,20 @@ public class CriteriaProbabilitiesHandler implements Handler<Message<Object>> {
 
         CriteriaProbabilityRequest request = (CriteriaProbabilityRequest) message.body();
 
-        System.out.println("CriteriaProbabilitiesHandler-START" + request.getId());
+        System.out.println("CriteriaProbabilitiesHandler: Received: " + request.getTransactionId());
 
-        Future<GeneralOccurrences> generalLoader = generalProbabilitiesStorage.fetch(request.getId());
-        Future<List<CriteriaStatistics>> criteriaLoader = criteriaStorage.fetchStatistics(request.getId(), request.getCriteriaValues());
-        Future<Map<String, GroupTotalStats>> groupLoader = groupStatisticsStorage.fetchTotalStats(request.getId());
+        Future<GeneralOccurrences> generalLoader = generalProbabilitiesStorage.fetch(request.getTransactionId());
+        Future<List<CriteriaStatistics>> criteriaLoader = criteriaStorage.fetchStatistics(request.getTransactionId(), request.getCriteriaValues());
+        Future<Map<String, GroupTotalStats>> groupLoader = groupStatisticsStorage.fetchTotalStats(request.getTransactionId());
 
-        System.out.println("CriteriaProbabilitiesHandler-REQUESTS_ISSUED" + request.getId());
+
+
         CompositeFuture.all(generalLoader, criteriaLoader, groupLoader)
             .setHandler(loaded -> {
-                System.out.println("CriteriaProbabilitiesHandler-RESPONSE" + request.getId());
                 if (loaded.failed()) {
                     loaded.cause().printStackTrace();
-                    System.out.println("CriteriaProbabilitiesHandler-FAIL" + request.getId());
+
+                    System.out.println("CriteriaProbabilitiesHandler:    Failed: " + request.getTransactionId());
                     message.fail(500, loaded.cause().getMessage());
                     return;
                 }
@@ -67,7 +69,8 @@ public class CriteriaProbabilitiesHandler implements Handler<Message<Object>> {
 
                 ProbabilityStatistics result = buildProbabilityStatistics(request.getCriteriaValues(), general, criteria, group);
 
-                System.out.println("CriteriaProbabilitiesHandler-REPLY" + request.getId());
+                System.out.println("CriteriaProbabilitiesHandler:  Finished: " + request.getTransactionId());
+
                 message.reply(result);
             });
     }

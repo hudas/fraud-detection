@@ -22,7 +22,6 @@ import static com.mongodb.client.model.Filters.*;
 
 public class ResultStorage {
 
-
     public static final String TRANSACTION_DATA_OBJECT = "data";
     public static final String CRITERIA_OBJECT = "criteria";
     public static final String AMOUNT_FIELD = "amount";
@@ -34,6 +33,13 @@ public class ResultStorage {
     public static final String NAME_FIELD = "name";
     public static final String VALUE_FIELD = "value";
     public static final String CRITERIA_VALUES_OBJECT = "criteria";
+    public static final String BEHAVIOUR_OBJECT = "behaviour";
+    public static final String DISTANCE_COMMON_FIELD = "distanceCommon";
+    public static final String DISTANCE_LAST_FIELD = "distanceLast";
+    public static final String TIME_DIFF_FIELD = "timeDiff";
+    public static final String SUM_RATIO_DAILY = "sumRatioDaily";
+    public static final String SUM_RATIO_WEEKLY = "sumRatioWeekly";
+    public static final String SUM_RATIO_MONTHLY = "sumRatioMonthly";
     private MongoClient client;
     private MongoCollection<Document> resultCollection;
 
@@ -45,6 +51,8 @@ public class ResultStorage {
     }
 
     public Future<LearningRequest> fetchTransactionResult(String transactionId) {
+        long start = System.currentTimeMillis();
+
         Future<LearningRequest> loader = Future.future();
 
         resultCollection.find(eq("id", transactionId))
@@ -57,6 +65,8 @@ public class ResultStorage {
 
                 LearningRequest recreatedRequest = recreateRequestFromData(transactionId, result);
 
+                long end = System.currentTimeMillis();
+//                System.out.println("ResultStorage.fetchTransactionResult took: " + (end - start));
                 loader.complete(recreatedRequest);
             });
 
@@ -70,7 +80,8 @@ public class ResultStorage {
     public Future<Void> storeLog(LearningRequest request) {
         Document document = new Document("id", request.getTransaction().getTransactionId())
                 .append(TRANSACTION_DATA_OBJECT, buildTransactionDocument(request))
-                .append(CRITERIA_OBJECT, buildCriteriaDocuments(request));
+                .append(CRITERIA_OBJECT, buildCriteriaDocuments(request))
+                .append(BEHAVIOUR_OBJECT, buildBehaviourDocument(request));
 
         Future<Void> loader = Future.future();
 
@@ -85,6 +96,17 @@ public class ResultStorage {
         }));
 
         return loader;
+    }
+
+    private Document buildBehaviourDocument(LearningRequest request) {
+        BehaviourData behaviourData = request.getBehaviourData();
+
+        return new Document(DISTANCE_COMMON_FIELD, behaviourData.getDistanceFromCommon())
+            .append(DISTANCE_LAST_FIELD, behaviourData.getDistanceFromLast())
+            .append(TIME_DIFF_FIELD, behaviourData.getTimeDifferenceFromLast())
+            .append(SUM_RATIO_DAILY, behaviourData.getSumRatioDaily())
+            .append(SUM_RATIO_WEEKLY, behaviourData.getSumRatioWeekly())
+            .append(SUM_RATIO_MONTHLY, behaviourData.getSumRatioMonthly());
     }
 
     private List<Document> buildCriteriaDocuments(LearningRequest request) {
@@ -125,6 +147,8 @@ public class ResultStorage {
             (Document) result.get(TRANSACTION_DATA_OBJECT)
         );
 
+        BehaviourData behaviour = parseBehaviour((Document) result.get(BEHAVIOUR_OBJECT));
+
         Map<String, Map<String, String>> groupedCriteriaValues = new HashMap<>();
 
         Map<String, String> groupValues = new HashMap<>();
@@ -153,9 +177,20 @@ public class ResultStorage {
         return new LearningRequest(
             false,
             data,
-            null,
+            behaviour,
             groupedCriteriaValues,
             groupValues
+        );
+    }
+
+    private BehaviourData parseBehaviour(Document document) {
+        return new BehaviourData(
+            document.getDouble(SUM_RATIO_DAILY).floatValue(),
+            document.getDouble(SUM_RATIO_WEEKLY).floatValue(),
+            document.getDouble(SUM_RATIO_WEEKLY).floatValue(),
+            document.getDouble(TIME_DIFF_FIELD).floatValue(),
+            document.getDouble(DISTANCE_COMMON_FIELD).floatValue(),
+            document.getDouble(DISTANCE_LAST_FIELD).floatValue()
         );
     }
 

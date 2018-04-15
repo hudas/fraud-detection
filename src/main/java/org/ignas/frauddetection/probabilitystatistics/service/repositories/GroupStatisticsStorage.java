@@ -43,6 +43,8 @@ public class GroupStatisticsStorage {
     }
 
     public Future<CombinationStatistics> fetchCombination(CombinationStatistics combination) {
+        long start = System.currentTimeMillis();
+
         Future<CombinationStatistics> loader = Future.future();
 
         groupStatistics.find(and(eq(NAME_FIELD, combination.getGroup()), eq(COMBINATIONS_DOC + "." + CODE_FIELD, combination.getCode())))
@@ -56,6 +58,9 @@ public class GroupStatisticsStorage {
 
                 Document loadedCombination = getFirst((List <Document>) result.get(COMBINATIONS_DOC), null);
 
+                long end = System.currentTimeMillis();
+
+                System.out.println("GroupStatisticsStorage.fetchCombination took: " + (end - start));
                 loader.complete(
                     new CombinationStatistics(
                         combination.getGroup(),
@@ -69,8 +74,8 @@ public class GroupStatisticsStorage {
         return loader;
     }
 
-    public Future<Map<String, GroupTotalStats>> fetchTotalStats(long id) {
-        System.out.println("GroupStatisticsStorage-FETCH-START" + id);
+    public Future<Map<String, GroupTotalStats>> fetchTotalStats(String transaction) {
+        long start = System.currentTimeMillis();
 
         Future loader = Future.future();
 
@@ -80,7 +85,6 @@ public class GroupStatisticsStorage {
             .projection(Projections.include(NAME_FIELD, TOTALS_DOC))
             .forEach(
                 document -> {
-                    System.out.println("GroupStatisticsStorage-FETCH-ONE-STOP" + id);
                     String name = document.getString(NAME_FIELD);
                     Document totals = (Document) document.get(TOTALS_DOC);
 
@@ -97,13 +101,12 @@ public class GroupStatisticsStorage {
                 (result, t) -> {
                     if (t != null) {
                         System.out.println(t.getMessage());
-                        System.out.println("GroupStatisticsStorage-FETCH-FAIL" + id);
                         loader.fail(t);
                         return;
                     }
 
-                    System.out.println("GroupStatisticsStorage-FETCH-STOP" + id);
-
+                    long end = System.currentTimeMillis();
+                    System.out.println("GroupStatisticsStorage.fetchCombination took: " + (end - start) + " FOR TRANSACTION " + transaction);
                     loader.complete(resultMap);
                 }
             );
@@ -124,6 +127,8 @@ public class GroupStatisticsStorage {
      * @param combinations
      */
     public Future<Void> initCombinationsIfNotPresent(List<CombinationStatistics> combinations) {
+        long start = System.currentTimeMillis();
+
         List<UpdateOneModel<Document>> updates = combinations
             .stream()
             .distinct()
@@ -150,6 +155,9 @@ public class GroupStatisticsStorage {
                 return;
             }
 
+
+            long end = System.currentTimeMillis();
+            System.out.println("GroupStatisticsStorage.initCombinationsIfNotPresent took: " + (end - start));
             loader.complete();
         }));
 
@@ -178,6 +186,8 @@ public class GroupStatisticsStorage {
     }
 
     public Future<Void> initTotalsIfNotPresent() {
+        long start = System.currentTimeMillis();
+
         List<UpdateOneModel<Document>> initDocuments = ImmutableList.of(
             buildInitQueryForGroup("AMOUNT"),
             buildInitQueryForGroup("COUNT"),
@@ -194,6 +204,9 @@ public class GroupStatisticsStorage {
                 return;
             }
 
+
+            long end = System.currentTimeMillis();
+            System.out.println("GroupStatisticsStorage.initTotalsIfNotPresent took: " + (end - start));
             loader.complete();
         });
 

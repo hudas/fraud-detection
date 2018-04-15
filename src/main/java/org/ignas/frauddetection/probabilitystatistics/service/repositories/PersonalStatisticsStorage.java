@@ -57,6 +57,8 @@ public class PersonalStatisticsStorage {
 
 
     public Future<PersonalStats> fetchPersonalStats(String debtor) {
+        long start = System.currentTimeMillis();
+
         Future<PersonalStats> future = Future.future();
 
         personalStatistics.find(Filters.eq("debtor", debtor))
@@ -68,10 +70,14 @@ public class PersonalStatisticsStorage {
                 }
 
                 if (result == null) {
+                    long end = System.currentTimeMillis();
+                    System.out.println("PersonalStatisticsStorage.fetchPersonalStats took: " + (end - start));
                     future.complete(null);
                     return;
                 }
 
+                long end = System.currentTimeMillis();
+                System.out.println("PersonalStatisticsStorage.initTotalsIfNotPresent took: " + (end - start));
                 future.complete(buildFromDocument(result));
             });
 

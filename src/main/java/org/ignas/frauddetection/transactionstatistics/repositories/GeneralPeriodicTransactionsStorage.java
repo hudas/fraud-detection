@@ -137,6 +137,8 @@ public class GeneralPeriodicTransactionsStorage {
     }
 
     public Future<PeriodicGeneralStats> fetchPeriodicStats() {
+        long start = System.currentTimeMillis();
+
         Future<PeriodicGeneralStats> future = Future.future();
 
         PeriodicGeneralStats generalStats = new PeriodicGeneralStats();
@@ -163,6 +165,8 @@ public class GeneralPeriodicTransactionsStorage {
                         return;
                     }
 
+                    long end = System.currentTimeMillis();
+//                    System.out.println("GeneralPeriodicTransactionsStorage.fetchValuesBeforeIncrements took: " + (end - start));
                     future.complete(generalStats);
             });
 
@@ -254,6 +258,8 @@ public class GeneralPeriodicTransactionsStorage {
 
     private Future<List<DebtorPeriodValue>> fetchValuesBeforeIncrements(
         MongoCollection<Document> collection, List<PeriodIncrement> increments) {
+        long start = System.currentTimeMillis();
+
         Future<List<DebtorPeriodValue>> future = Future.future();
 
         List<Bson> filters = increments.stream()
@@ -289,6 +295,9 @@ public class GeneralPeriodicTransactionsStorage {
                     return;
                 }
 
+                long end = System.currentTimeMillis();
+
+                System.out.println("GeneralPeriodicTransactionsStorage.fetchValuesBeforeIncrements took: " + (end - start));
                 future.complete(oldValues);
             });
 

@@ -26,6 +26,7 @@ public class CriteriaStorage {
 
     private static final String OCCURRENCES_FIELD = "totalOccurrences";
     private static final String OCCURRENCES_IN_FRAUD_FIELD = "occurrencesInFraud";
+    public static final String NAME_FIELD = "name";
 
     private MongoClient client;
 
@@ -62,99 +63,66 @@ public class CriteriaStorage {
                     }
 
                     long end = System.currentTimeMillis();
-                    System.out.println("CriteriaStorage.fetchValues took:" + (end - start));
                     loader.complete(statisticsResult);
                 });
 
         return loader;
     }
 
-    public Future<List<CriteriaStatistics>> fetchStatistics(long id, Map<String, String> criteriaValues) {
+    public Future<List<CriteriaStatistics>> fetchStatistics(String transaction, Map<String, String> criteriaValues) {
         long start = System.currentTimeMillis();
 
         Future<List<CriteriaStatistics>> totalLoader = Future.future();
 
         List<CriteriaStatistics> loadedStatistics = new ArrayList<>();
 
-        int criteriaToLoad = criteriaValues.size();
 
-        criteriaValues.entrySet()
+        List<Bson> criteriaFilters = criteriaValues.entrySet()
             .stream()
-            .map(criterion -> fetchStatistics(criterion.getKey(), criterion.getValue()))
-            .forEach(loader -> loader.setHandler(criteriaResult -> {
-                if (loader.failed()) {
-                    loader.cause().printStackTrace();
-                    totalLoader.fail(loader.cause());
-                    return;
-                }
+            .map(criterion -> and(eq("name", criterion.getKey()), eq("values.$.name", criterion.getValue())))
+            .collect(Collectors.toList());
 
-                System.out.println("CriteriaStorage-FETCH-ONE-" + loadedStatistics.size() + "-" + criteriaToLoad + " / " + id);
 
-                loadedStatistics.add(criteriaResult.result());
+        criteriaProbabilities.find(Filters.or(criteriaFilters))
+            .projection(Projections.include("name", "values.$"))
+            .forEach(
+                document -> {
+                    String name = document.getString(NAME_FIELD);
 
-                if (loadedStatistics.size() == criteriaToLoad) {
-                    long end = System.currentTimeMillis();
+                    Document values = Iterables.getFirst((List< Document >) document.get("values"), null);
+                    if (values == null) {
+                        totalLoader.fail(new IllegalStateException("Values missing for criteria: " + name));
+                        throw new IllegalStateException("Values missing for criteria: " + name);
+                    }
 
-                    System.out.println("CriteriaStorage.fetchStatistics took:" + (end - start));
+                    String value = values.getString(NAME_FIELD);
+
+
+                    loadedStatistics.add(new CriteriaStatistics(
+                            name,
+                            value,
+                            values.getLong(OCCURRENCES_FIELD),
+                            values.getLong(OCCURRENCES_IN_FRAUD_FIELD)
+                        )
+                    );
+
+                },
+                (result, t) -> {
+                    if (t != null) {
+                        t.printStackTrace();
+                        totalLoader.fail(t);
+                        return;
+                    }
+
+                    addUnknownValues(criteriaValues, loadedStatistics);
+
                     totalLoader.complete(loadedStatistics);
-                }
-            }));
+                });
 
         return totalLoader;
     }
 
-    /**
-     * Overloaded method for single criteria fetching.
-     * @param name
-     * @param value
-     * @return
-     */
-    public Future<CriteriaStatistics> fetchStatistics(String name, String value) {
-        Future<CriteriaStatistics> loader = Future.future();
-        criteriaProbabilities.find(
-            and(eq("name", name), eq("values.name", name)))
-            .projection(Projections.include("name", "values.$"))
-            .first((result, t) -> {
-                if (t != null) {
-                    t.printStackTrace();
-                    loader.fail(t);
-                    return;
-                }
 
-                if (result == null) {
-                    loader.complete(
-                        new CriteriaStatistics(
-                            name,
-                            value,
-                            0l,
-                            0l
-                        )
-                    );
-                    return;
-                }
-
-                Document values = Iterables.getFirst((List< Document >) result.get("values"), null);
-                if (values == null) {
-                    loader.fail(new IllegalStateException(
-                        "Values missing for criteria: " + name + " Value: " + name
-                    ));
-                    throw new IllegalStateException(
-                        "Values missing for criteria: " + name + " Value: " + name
-                    );
-                }
-
-                loader.complete(
-                    new CriteriaStatistics(
-                        name,
-                        value,
-                        values.getLong(OCCURRENCES_FIELD),
-                        values.getLong(OCCURRENCES_IN_FRAUD_FIELD)
-                    )
-                );
-            });
-
-        return loader;
-    }
 
     /**
      * Nested on purpose.
@@ -317,5 +285,23 @@ public class CriteriaStorage {
             documentValues.add(new CriteriaStatistics(criteriaName, valueName, occurences, occurencesInFraud));
         });
         return documentValues;
+    }
+
+    private void addUnknownValues(Map<String, String> criteriaValues, List<CriteriaStatistics> loadedStatistics) {
+        for (Map.Entry<String, String> requestedValue : criteriaValues.entrySet()) {
+            boolean notPresent = loadedStatistics.stream()
+                .noneMatch(it -> it.getName().equals(requestedValue.getKey()) && it.getValue().equals(requestedValue.getValue()));
+
+            if (notPresent) {
+                loadedStatistics.add(
+                    new CriteriaStatistics(
+                        requestedValue.getKey(),
+                        requestedValue.getValue(),
+                        0l,
+                        0l
+                    )
+                );
+            }
+        }
     }
 }
