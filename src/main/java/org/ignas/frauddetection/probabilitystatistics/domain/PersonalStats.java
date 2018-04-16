@@ -34,7 +34,7 @@ public class PersonalStats {
         TransactionData requestTransaction = request.getTransaction();
 
         if (latestTransaction == null
-            || latestTransaction != null && requestTransaction.getTime().isAfter(latestTransaction.getTime())) {
+            || requestTransaction.getTime().isAfter(latestTransaction.getTime())) {
 
 
             latestTransaction = new PersonalTransactionStats(
@@ -59,7 +59,7 @@ public class PersonalStats {
     }
 
     private void updateMinTimeDiff(long newTimeDiff) {
-        if (newTimeDiff == 0f) {
+        if (newTimeDiff <= 0f) {
             return;
         }
 
@@ -130,7 +130,7 @@ public class PersonalStats {
 
         upateAmount(increment.getMaxAmount());
         if (increment.getMinTimeDiff() == null || increment.getMinTimeDiff() <= 0) {
-            updateMinTimeDiff(Long.MAX_VALUE);
+            updateMinTimeDiff(Integer.MAX_VALUE);
         } else {
             updateMinTimeDiff(increment.getMinTimeDiff());
         }

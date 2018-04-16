@@ -11,7 +11,7 @@ import org.ignas.frauddetection.httpapi.EvaluationRequestController;
 import org.ignas.frauddetection.probabilitystatistics.*;
 import org.ignas.frauddetection.processinglog.EvaluationArchive;
 import org.ignas.frauddetection.resultsanalyser.ResultsAnalyser;
-import org.ignas.frauddetection.transactionevaluation.EvaluationController;
+import org.ignas.frauddetection.transactionevaluation.TransactionMappingResolver;
 import org.ignas.frauddetection.transactionstatistics.*;
 
 /**
@@ -35,7 +35,7 @@ public class DetectionLauncher implements VertxLifecycleHooks {
             .setWorker(true);
 
         ImmutableList<Verticle> workers = ImmutableList.<Verticle>builder()
-            .add(new EvaluationController())
+            .add(new TransactionMappingResolver())
             .add(new TransactionStatisticArchive())
             .add(new ProbabilityStatisticsArchive())
             .add(new ResultsAnalyser())
@@ -46,7 +46,7 @@ public class DetectionLauncher implements VertxLifecycleHooks {
             .add(new CriteriaStatisticsUpdater())
             .add(new EvaluationArchive())
             .add(new ExternalConditionUpdater())
-            .add(new TransactionStatisticsProcessor())
+            .add(new TransactionLearningBatcher())
             .add(new PublicStatisticsUpdater())
             .add(new PublicPeriodicStatisticsUpdater())
             .add(new PersonalStatisticsUpdater())

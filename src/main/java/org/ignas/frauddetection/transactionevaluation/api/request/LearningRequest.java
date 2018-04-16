@@ -60,5 +60,6 @@ public class LearningRequest {
 
     public void markFraud() {
         fraudulent = true;
+        alreadyProcessedTransaction = true;
     }
 }

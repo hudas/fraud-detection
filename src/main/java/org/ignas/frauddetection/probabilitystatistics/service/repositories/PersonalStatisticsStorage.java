@@ -27,7 +27,6 @@ public class PersonalStatisticsStorage {
     public static final String LOCATION_OBJECT = "location";
     public static final String LONGTITUDE_FIELD = "longtitude";
     public static final String LATITUDE_FIELD = "latitude";
-    public static final String AMOUNT_FIELD = "amount";
     public static final String TIME_FIELD = "time";
     public static final String MAX_AMOUNT_FIELD = "maxAmount";
     public static final String MIN_TIME_DIFF_FIELD = "minTimeDiff";
@@ -39,7 +38,7 @@ public class PersonalStatisticsStorage {
     public static final String PERIODS_OBJECT = "periods";
     public static final String TRANSACTIONS_OBJECT = "transactions";
     public static final String TRANSACTION_TIME_FIELD = "time";
-    public static final String TRANSACTION_AMOUNT_FIELD = "amoun";
+    public static final String TRANSACTION_AMOUNT_FIELD = "amount";
     public static final String LENGTH_FIELD = "length";
     public static final String COUNT_FIELD = "count";
     public static final String SUM_FIELD = "sum";
@@ -153,7 +152,7 @@ public class PersonalStatisticsStorage {
             .append(LATITUDE_FIELD, latestLocation.getLatitude());
 
         Document lastTransactionDoc = new Document(LOCATION_OBJECT, latestLocationDoc)
-            .append(AMOUNT_FIELD, latest.getAmount())
+            .append(TRANSACTION_AMOUNT_FIELD, latest.getAmount())
             .append(TIME_FIELD, latest.getTime().toString());
 
         List<Document> locationsOccurrencesDocs = newStats.getLocationOccurences()
@@ -175,7 +174,7 @@ public class PersonalStatisticsStorage {
                 .append(TRANSACTIONS_OBJECT, it.getTransactions()
                     .stream()
                     .map(trans -> new Document(TIME_FIELD, trans.getTime().toString())
-                        .append(AMOUNT_FIELD, trans.getAmount())
+                        .append(TRANSACTION_AMOUNT_FIELD, trans.getAmount())
                     )
                     .collect(Collectors.toList())
                 )
@@ -234,7 +233,7 @@ public class PersonalStatisticsStorage {
 
         Location location = new Location(latitude, longtitude);
 
-        Float amount = lastDoc.getDouble(AMOUNT_FIELD).floatValue();
+        Float amount = lastDoc.getDouble(TRANSACTION_AMOUNT_FIELD).floatValue();
         LocalDateTime time = LocalDateTime.parse(lastDoc.getString(TIME_FIELD));
 
 
@@ -277,7 +276,7 @@ public class PersonalStatisticsStorage {
 
             List<PersonalPeriodTransaction> periodTransactions = new ArrayList<>();
 
-            List<Document> transactionDocs = (List<Document>) document.get(TRANSACTIONS_OBJECT);
+            List<Document> transactionDocs = (List<Document>) periodDoc.get(TRANSACTIONS_OBJECT);
 
             if (transactionDocs != null) {
                 for (Document transactionDoc: transactionDocs) {

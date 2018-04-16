@@ -15,7 +15,7 @@ import org.ignas.frauddetection.transactionevaluation.integration.FraudProbabili
 import org.ignas.frauddetection.transactionevaluation.integration.LearningInitiationIntegration;
 import org.ignas.frauddetection.transactionevaluation.integration.TransactionStatisticsLoader;
 
-public class EvaluationController extends AbstractVerticle {
+public class TransactionMappingResolver extends AbstractVerticle {
 
     public static final int CACHE_TTL = 10000;
 

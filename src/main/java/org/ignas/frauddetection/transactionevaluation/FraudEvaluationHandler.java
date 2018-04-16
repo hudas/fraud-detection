@@ -102,6 +102,7 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
                         distanceFromLast.getRawResult(),
                         distanceFromCommon.getRawResult()
                     );
+
                     learningInitiator.publishData(requestData, behaviour, criteriaValues, groupValues);
                 });
             });

@@ -28,6 +28,7 @@ public class RequestsBatcher {
 
     public Optional<BatchToProcess> add(LearningRequest request) {
         buffer.add(request);
+        System.out.println("Request received, Transactions batch size: " + buffer.size());
 
         if (buffer.size() >= batchSize && flushing.compareAndSet(false, true)) {
             BatchToProcess requestsBatch = prepareBatch();

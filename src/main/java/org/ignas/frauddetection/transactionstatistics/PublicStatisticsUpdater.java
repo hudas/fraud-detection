@@ -39,8 +39,14 @@ public class PublicStatisticsUpdater extends AbstractVerticle {
             float distanceFromCommonIncrement = 0;
             float squaredDistanceFromCommonIncrement = 0;
 
+            long additionalInstances = 0;
+
             for (LearningRequest request : batch.getItems()) {
                 BehaviourData data = request.getBehaviourData();
+
+                if (request.isAlreadyProcessedTransaction()) {
+                    continue;
+                }
 
                 long timeDiff = Float.valueOf(data.getTimeDifferenceFromLast()).longValue();
                 timeDiffIncrement += timeDiff;
@@ -50,19 +56,21 @@ public class PublicStatisticsUpdater extends AbstractVerticle {
                 distanceFromLastIncrement += distanceFromLast;
                 squaredDistanceFromLastIncrement += distanceFromLast * distanceFromLast;
 
-                float distanceFromCommon = data.getDistanceFromLast();
+                float distanceFromCommon = data.getDistanceFromCommon();
                 distanceFromCommonIncrement += distanceFromCommon;
                 squaredDistanceFromCommonIncrement += distanceFromCommon * distanceFromCommon;
+
+                additionalInstances++;
             }
 
-            long additionalInstances = batch.getItems().size();
-
-            nonPeriodicTransactionsStorage.increment(
-                additionalInstances,
-                timeDiffIncrement, squaredTimeDiffIncrement,
-                distanceFromLastIncrement, squaredDistanceFromLastIncrement,
-                distanceFromCommonIncrement, squaredDistanceFromCommonIncrement
-            );
+            if (additionalInstances != 0) {
+                nonPeriodicTransactionsStorage.increment(
+                    additionalInstances,
+                    timeDiffIncrement, squaredTimeDiffIncrement,
+                    distanceFromLastIncrement, squaredDistanceFromLastIncrement,
+                    distanceFromCommonIncrement, squaredDistanceFromCommonIncrement
+                );
+            }
 
             // Resend same event without any modifications
             bus.publish("transaction-processing.public-non-periodic-data-updated", batch);

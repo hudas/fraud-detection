@@ -8,9 +8,9 @@ import org.ignas.frauddetection.probabilitystatistics.service.RequestsBatcher;
 import org.ignas.frauddetection.shared.ImmutableObjectCodec;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
 
-public class TransactionStatisticsProcessor extends AbstractVerticle {
+public class TransactionLearningBatcher extends AbstractVerticle {
 
-    public static final int BATCH_SIZE = 5;
+    public static final int BATCH_SIZE = 1;
 
     @Override
     public void start() {

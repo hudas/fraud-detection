@@ -40,13 +40,19 @@ public class PersonalStatisticsUpdater extends AbstractVerticle {
 
             // Batch transactions for single debtor
             for (LearningRequest request : batch.getItems()) {
+                if (request.isAlreadyProcessedTransaction()) {
+                    continue;
+                }
+
                 updates.computeIfAbsent(
                     request.getTransaction().getDebtorId(),
                     PersonalStats::new
                 ).updateFrom(request);
             }
 
-            personalStatistics.update(Lists.newArrayList(updates.values()));
+            if (!updates.isEmpty()) {
+                personalStatistics.update(Lists.newArrayList(updates.values()));
+            }
 
             bus.publish("transaction-processing.personal-data-updated", batch);
         });
