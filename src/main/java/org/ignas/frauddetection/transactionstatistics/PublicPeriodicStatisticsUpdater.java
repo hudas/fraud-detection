@@ -7,16 +7,11 @@ import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
 import org.ignas.frauddetection.transactionevaluation.api.request.TransactionData;
-import org.ignas.frauddetection.transactionstatistics.domain.PeriodIncrement;
-import org.ignas.frauddetection.transactionstatistics.domain.DebtorPeriodValue;
-import org.ignas.frauddetection.transactionstatistics.domain.SquaredIncrement;
-import org.ignas.frauddetection.transactionstatistics.domain.TotalIncrement;
+import org.ignas.frauddetection.transactionstatistics.domain.*;
 import org.ignas.frauddetection.transactionstatistics.repositories.GeneralPeriodicTransactionsStorage;
 import org.joda.time.LocalDateTime;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
 
@@ -67,7 +62,7 @@ public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
 
                 float dailyRatio = request.getBehaviourData().getSumRatioDaily();
                 float weeklyRatio = request.getBehaviourData().getSumRatioWeekly();
-                float monthlyRatio = request.getBehaviourData().getSumRatioDaily();
+                float monthlyRatio = request.getBehaviourData().getSumRatioMonthly();
 
                 totalDailyRatioIncrement += dailyRatio;
                 totalWeeklyRatioIncrement += weeklyRatio;
@@ -80,28 +75,33 @@ public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
                 LocalDateTime time = data.getTime();
 
                 dailyIncrements.add(new PeriodIncrement(
-                    time,
-                    time,
+                    time.withTime(0, 0, 0, 0),
+                    time.withTime(23, 59, 59, 0),
                     data.getDebtorId(),
                     data.getAmount(),
                     1
                 ));
 
                 weeklyIncrements.add(new PeriodIncrement(
-                    time.dayOfWeek().withMinimumValue(),
-                    time.dayOfWeek().withMaximumValue(),
+                    time.dayOfWeek().withMinimumValue().withTime(0, 0, 0, 0),
+                    time.dayOfWeek().withMaximumValue().withTime(23, 59, 59, 0),
                     data.getDebtorId(),
                     data.getAmount(),
                     1
                 ));
 
                 monthlyIncrements.add(new PeriodIncrement(
-                    time.dayOfMonth().withMinimumValue(),
-                    time.dayOfMonth().withMaximumValue(),
+                    time.dayOfMonth().withMinimumValue().withTime(0, 0, 0, 0),
+                    time.dayOfMonth().withMaximumValue().withTime(23, 59, 59, 0),
                     data.getDebtorId(),
                     data.getAmount(),
                     1
                 ));
+            }
+
+            if (totalQuantityIncrement == 0) {
+                bus.publish("transaction-processing.public-periodic-data-updated", batch);
+                return;
             }
 
             final float finalTotalSumIncrement = totalSumIncrement;
@@ -149,8 +149,8 @@ public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
                             }
 
                             Integer newDailyInstances = updateEvent.result().resultAt(0);
-                            Integer newWeeklyInstances = updateEvent.result().resultAt(0);
-                            Integer newMonthlyInstances = updateEvent.result().resultAt(0);
+                            Integer newWeeklyInstances = updateEvent.result().resultAt(1);
+                            Integer newMonthlyInstances = updateEvent.result().resultAt(2);
 
                             periodicStorage.updateTotals(
                                 newDailyInstances,
@@ -185,26 +185,43 @@ public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
         float dailySquaredSumDiff = 0;
         float dailySquaredCountDiff = 0;
 
-        for (PeriodIncrement increment : increments) {
+        Map<UniqueDebtorPeriod, List<PeriodIncrement>> groupedIncrements = new HashMap<>();
+
+        for(PeriodIncrement increment : increments) {
+            groupedIncrements.computeIfAbsent(
+                new UniqueDebtorPeriod(increment.getStart(), increment.getEnd(), increment.getDebtor()),
+                period -> new ArrayList<>()
+            ).add(increment);
+        }
+
+        for (Map.Entry<UniqueDebtorPeriod, List<PeriodIncrement>> periodIncrements : groupedIncrements.entrySet()) {
             Optional<DebtorPeriodValue> optionalOldValue = oldValues.stream()
-                .filter(value -> value.matches(increment))
+                .filter(value -> value.matches(periodIncrements.getKey()))
                 .findAny();
+
+            float sumOfGroupIncrementAmounts = periodIncrements.getValue().stream()
+                .map(PeriodIncrement::getAmount)
+                .reduce(0f, Float::sum);
+
+            float countOfGroupIncrementAmounts = periodIncrements.getValue().stream()
+                .map(PeriodIncrement::getCount)
+                .reduce(0f, Float::sum);
 
             if (optionalOldValue.isPresent()) {
                 DebtorPeriodValue oldValue = optionalOldValue.get();
 
                 float oldSquaredSum = oldValue.getSum() * oldValue.getSum();
-                float newSquaredSum = (oldValue.getSum() + increment.getAmount()) * (oldValue.getSum() + increment.getAmount());
+                float newSquaredSum = (oldValue.getSum() + sumOfGroupIncrementAmounts) * (oldValue.getSum() + sumOfGroupIncrementAmounts);
 
                 dailySquaredSumDiff += newSquaredSum - oldSquaredSum;
 
                 float oldSquaredCount = oldValue.getCount() * oldValue.getCount();
-                float newSquaredCount = (oldValue.getCount() + increment.getCount()) * (oldValue.getCount() + increment.getCount());
+                float newSquaredCount = (oldValue.getCount() + countOfGroupIncrementAmounts) * (oldValue.getCount() + countOfGroupIncrementAmounts);
 
-                dailySquaredCountDiff += oldSquaredCount - newSquaredCount;
+                dailySquaredCountDiff += newSquaredCount - oldSquaredCount;
             } else {
-                dailySquaredSumDiff += increment.getAmount() * increment.getAmount();
-                dailySquaredCountDiff += increment.getCount() * increment.getCount();
+                dailySquaredSumDiff += sumOfGroupIncrementAmounts * sumOfGroupIncrementAmounts;
+                dailySquaredCountDiff += countOfGroupIncrementAmounts * countOfGroupIncrementAmounts;
             }
         }
 

@@ -1,11 +1,9 @@
 package org.ignas.frauddetection.transactionstatistics;
 
-import com.google.common.collect.Lists;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
-import org.ignas.frauddetection.probabilitystatistics.service.repositories.GeneralProbabilitiesStorage;
 import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionstatistics.domain.ConditionOccurrences;
 import org.ignas.frauddetection.transactionstatistics.repositories.ConditionStorage;
@@ -14,7 +12,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.google.common.collect.Lists.newArrayList;
 import static org.ignas.frauddetection.transactionstatistics.domain.LocationService.toNearestArea;
 
 public class ExternalConditionUpdater extends AbstractVerticle {
@@ -66,13 +63,13 @@ public class ExternalConditionUpdater extends AbstractVerticle {
             Map<Location, ConditionOccurrences<Location>> locationOccurrences = new HashMap<>();
 
             batch.getItems().forEach(item -> {
-                ConditionOccurrences<Location> creditor = locationOccurrences.<Location>computeIfAbsent(
+                ConditionOccurrences<Location> location = locationOccurrences.<Location>computeIfAbsent(
                     toNearestArea(item.getTransaction().getLocation()), ConditionOccurrences::<Location>empty);
 
                 int nonFraudIncrement = !item.isAlreadyProcessedTransaction() ? 1 : 0;
                 int fraudIncrement = item.isFraudulent() ? 1 : 0;
 
-                creditor.increaseOccurrences(nonFraudIncrement, fraudIncrement);
+                location.increaseOccurrences(nonFraudIncrement, fraudIncrement);
             });
 
             conditionStorage.updateOccurrences(

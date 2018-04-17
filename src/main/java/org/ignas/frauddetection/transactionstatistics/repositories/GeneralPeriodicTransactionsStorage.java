@@ -179,13 +179,21 @@ public class GeneralPeriodicTransactionsStorage {
             .map(this::buildInitPeriodQuery)
             .collect(Collectors.toList());
 
+        List<PeriodIncrement> newDebtorRequiringIncrements = new ArrayList<>();
+
         List<UpdateOneModel<Document>> debtorCreations = increments.stream()
-            .distinct()
+            .filter(it -> newDebtorRequiringIncrements.stream()
+                .noneMatch(existing ->
+                    existing.getDebtor().equals(it.getDebtor())
+                        && existing.getStart().equals(it.getStart())
+                        && existing.getEnd().equals(it.getEnd())
+                )
+            )
+            .peek(newDebtorRequiringIncrements::add)
             .map(this::buildInitDebtorQuery)
             .collect(Collectors.toList());
 
         List<UpdateOneModel<Document>> debtorAdditions = increments.stream()
-            .distinct()
             .map(this::buildAddAmountQuery)
             .collect(Collectors.toList());
 
@@ -203,7 +211,7 @@ public class GeneralPeriodicTransactionsStorage {
                 }
 
                 // Returns count of new periods inserted
-                future.complete(debtorResult.getInsertedCount());
+                future.complete(debtorResult.getModifiedCount());
 
                 collection.bulkWrite(debtorAdditions, new BulkWriteOptions().ordered(false), (additionsResult, additionsEx) -> {
                     if (debtorEx != null) {
@@ -262,32 +270,38 @@ public class GeneralPeriodicTransactionsStorage {
 
         Future<List<DebtorPeriodValue>> future = Future.future();
 
+        final List<PeriodIncrement> uniqueDebtorPeriods = new ArrayList<>();
+
         List<Bson> filters = increments.stream()
+            .filter(it -> uniqueDebtorPeriods.stream()
+                .noneMatch(existing ->
+                    existing.getDebtor().equals(it.getDebtor())
+                        && existing.getStart().equals(it.getStart())
+                        && existing.getEnd().equals(it.getEnd())
+                )
+            )
+            .peek(uniqueDebtorPeriods::add)
             .map(increment ->
                 and(
                     eq(START_FIELD, increment.getStart().toString()),
                     eq(END_FIELD, increment.getEnd().toString()),
-                    eq("debtors.$.id", increment.getDebtor())
+                    Filters.elemMatch(DEBTORS_OBJECT, Filters.eq("id", increment.getDebtor()))
                 )
             )
             .collect(Collectors.toList());
 
         List<DebtorPeriodValue> oldValues = new ArrayList<>();
 
-
         collection.find(or(filters))
-            .projection(Projections.include(START_FIELD, END_FIELD, "debtors.$"))
+            .projection(Projections.include(START_FIELD, END_FIELD, DEBTORS_OBJECT))
             .forEach(document -> {
-                List<Float> amounts = (List<Float>) document.get("debtors.amounts");
-                Float sum = amounts.stream().reduce(0f, Float::sum);
+                List<DebtorPeriodValue> filteredValues = parseDebtorsFromPeriodDoc(document, uniqueDebtorPeriods);
 
-                oldValues.add(new DebtorPeriodValue(
-                    LocalDateTime.parse(document.getString(START_FIELD)),
-                    LocalDateTime.parse(document.getString(END_FIELD)),
-                    document.getString("debtors.id"),
-                    sum,
-                    amounts.size()
-                ));
+                if (filteredValues.isEmpty()) {
+                    return;
+                }
+
+                oldValues.addAll(filteredValues);
 
             }, (result, t) -> {
                 if (t != null) {
@@ -302,6 +316,44 @@ public class GeneralPeriodicTransactionsStorage {
             });
 
         return future;
+    }
+
+    private List<DebtorPeriodValue> parseDebtorsFromPeriodDoc(Document document, List<PeriodIncrement> uniqueDebtorPeriods) {
+        List<DebtorPeriodValue> filteredValues = new ArrayList<>();
+
+        LocalDateTime periodStart = LocalDateTime.parse(document.getString(START_FIELD));
+        LocalDateTime periodEnd = LocalDateTime.parse(document.getString(END_FIELD));
+
+        List<String> debtorsInPeriod = uniqueDebtorPeriods.stream()
+            .filter(it -> it.forPeriod(periodStart, periodEnd))
+            .map(it -> it.getDebtor())
+            .collect(Collectors.toList());
+
+        // https://jira.mongodb.org/browse/SERVER-20127 cannot use positional operator to fetch only required value
+        List<Document> debtors = (List<Document>) document.get(DEBTORS_OBJECT);
+
+        for(Document debtorDoc: debtors) {
+            String debtorId = debtorDoc.getString("id");
+
+            boolean requested = debtorsInPeriod.stream()
+                .anyMatch(it -> it.equals(debtorId));
+
+            if (!requested) {
+                continue;
+            }
+
+            List<Double> amounts = (List<Double>) debtorDoc.get("amounts");
+            Float sum = amounts.stream().reduce(0d, Double::sum).floatValue();
+
+            filteredValues.add(new DebtorPeriodValue(
+                periodStart,
+                periodEnd,
+                debtorId,
+                sum,
+                amounts.size()
+            ));
+        }
+        return filteredValues;
     }
 
     private UpdateOneModel<Document> buildTotalUpdateForPeriod(

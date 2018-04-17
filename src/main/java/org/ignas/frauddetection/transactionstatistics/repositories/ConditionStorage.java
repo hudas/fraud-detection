@@ -66,7 +66,7 @@ public class ConditionStorage {
         long start = System.currentTimeMillis();
 
         Future<ConditionOccurrences> creditorLoader = Future.future();
-        creditorsConditions.find(Filters.eq(ID_FIELD, creditor))
+        creditorsConditions.find(eq(ID_FIELD, creditor))
             .first((result, t) -> {
                 if (t != null) {
                     t.printStackTrace();
@@ -82,7 +82,7 @@ public class ConditionStorage {
             });
 
         Future<ConditionOccurrences> timeLoader = Future.future();
-        timeConditions.find(Filters.eq(ID_FIELD, hour.getHourOfDay()))
+        timeConditions.find(eq(ID_FIELD, hour.getHourOfDay()))
             .first((result, t) -> {
                 if (t != null) {
                     t.printStackTrace();
@@ -98,7 +98,7 @@ public class ConditionStorage {
             });
 
         Future<ConditionOccurrences> locationLoader = Future.future();
-        locationConditions.find(Filters.eq(ID_FIELD, location.toString()))
+        locationConditions.find(eq(ID_FIELD, location.toString()))
             .first((result, t) -> {
                 if (t != null) {
                     t.printStackTrace();
@@ -238,9 +238,9 @@ public class ConditionStorage {
                 ConditionTotalIncrement location = buildIncrement(locationOccurences, locationValues);
 
                 List<UpdateOneModel<Document>> totalUpdates = ImmutableList.<UpdateOneModel<Document>>builder()
-                    .add(buildTotalIncrease(creditor))
-                    .add(buildTotalIncrease(time))
-                    .add(buildTotalIncrease(location))
+                    .add(buildTotalIncrease(creditor, CREDITOR_TYPE))
+                    .add(buildTotalIncrease(time, TIME_TYPE))
+                    .add(buildTotalIncrease(location, LOCATION_TYPE))
                     .build();
 
 
@@ -303,20 +303,24 @@ public class ConditionStorage {
         );
     }
 
-    private UpdateOneModel<Document> buildTotalIncrease(ConditionTotalIncrement creditor) {
+    private UpdateOneModel<Document> buildTotalIncrease(ConditionTotalIncrement creditor, String type) {
         Document increase = new Document(INSTANCES_COUNT_FIELD, creditor.getNewInstances())
             .append(PROBABILITIES_TOTAL_FIELD, creditor.getValueIncrease())
             .append(SQUARED_PROBABILITIES_TOTAL_FIELD, creditor.getValueIncreaseSquared());
 
-        return new UpdateOneModel<Document>(Filters.eq(TYPE_FIELD, CREDITOR_TYPE), new Document("$inc", increase));
+        return new UpdateOneModel<Document>(
+            eq(TYPE_FIELD, type),
+            new Document("$inc", increase),
+            new UpdateOptions().upsert(true)
+        );
     }
 
     private <T> ConditionTotalIncrement buildIncrement(
         List<ConditionOccurrences<T>> increments,
         List<ConditionOccurrences<String>> oldValues) {
 
-        long sumDiff = 0;
-        long squaredSumDiff = 0;
+        float sumDiff = 0;
+        float squaredSumDiff = 0;
         long newInstances = 0;
 
         for(ConditionOccurrences<T> increment: increments) {
@@ -334,7 +338,13 @@ public class ConditionStorage {
                 previousValue = ConditionOccurrences.empty(increment.getName());
             }
 
-            float previousRate = ((float) previousValue.getFraudOccurrences()) / previousValue.getOccurrences();
+            final float previousRate;
+
+            if (previousValue.getOccurrences() == 0) {
+                previousRate = 0f;
+            } else {
+                previousRate = ((float) previousValue.getFraudOccurrences()) / previousValue.getOccurrences();
+            }
 
             float incrementedOccurences = previousValue.getOccurrences() + increment.getOccurrences();
             float incrementedFraudOccurences = previousValue.getFraudOccurrences() + increment.getFraudOccurrences();

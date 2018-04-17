@@ -201,8 +201,8 @@ public class ResultStorage {
             transactionData.getString(DEBTOR_FIELD),
             transactionData.getString(CREDITOR_FIELD),
             new Location(
-                transactionData.getDouble(LONGTITUDE_FIELD).floatValue(),
-                transactionData.getDouble(LATITUDE_FIELD).floatValue()
+                transactionData.getDouble(LATITUDE_FIELD).floatValue(),
+                transactionData.getDouble(LONGTITUDE_FIELD).floatValue()
             ),
             LocalDateTime.parse(transactionData.getString(TIME_FIELD))
         );

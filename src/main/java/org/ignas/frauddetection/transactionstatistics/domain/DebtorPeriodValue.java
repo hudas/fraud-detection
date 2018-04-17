@@ -48,9 +48,9 @@ public class DebtorPeriodValue {
         return count;
     }
 
-    public boolean matches(PeriodIncrement increment) {
-        return getDebtor().equals(increment.getDebtor())
-            && getStart().equals(increment.getStart())
-            && getEnd().equals(increment.getEnd());
+    public boolean matches(UniqueDebtorPeriod period) {
+        return getDebtor().equals(period.getDebtor())
+            && getStart().equals(period.getStart())
+            && getEnd().equals(period.getEnd());
     }
 }

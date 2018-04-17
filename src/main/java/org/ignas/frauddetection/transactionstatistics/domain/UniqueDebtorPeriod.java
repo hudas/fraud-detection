@@ -4,33 +4,21 @@ import org.joda.time.LocalDateTime;
 
 import java.util.Objects;
 
-public class PeriodIncrement {
+public class UniqueDebtorPeriod {
 
     private LocalDateTime start;
     private LocalDateTime end;
 
     private String debtor;
 
-    private float amount;
-    private float count;
-
-    public PeriodIncrement(
+    public UniqueDebtorPeriod(
         LocalDateTime start,
         LocalDateTime end,
-        String debtor,
-        float amount,
-        float count) {
+        String debtor) {
 
         this.start = start;
         this.end = end;
         this.debtor = debtor;
-        this.amount = amount;
-        this.count = count;
-    }
-
-
-    public boolean forPeriod(LocalDateTime start, LocalDateTime end) {
-        return this.start.equals(start) && this.end.equals(end);
     }
 
     public LocalDateTime getStart() {
@@ -45,26 +33,19 @@ public class PeriodIncrement {
         return debtor;
     }
 
-    public float getAmount() {
-        return amount;
-    }
-
-    public float getCount() {
-        return count;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        PeriodIncrement that = (PeriodIncrement) o;
+        UniqueDebtorPeriod that = (UniqueDebtorPeriod) o;
         return Objects.equals(start, that.start) &&
-            Objects.equals(end, that.end);
+            Objects.equals(end, that.end) &&
+            Objects.equals(debtor, that.debtor);
     }
 
     @Override
     public int hashCode() {
 
-        return Objects.hash(start, end);
+        return Objects.hash(start, end, debtor);
     }
 }
