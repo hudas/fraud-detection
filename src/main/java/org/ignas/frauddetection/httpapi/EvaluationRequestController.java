@@ -14,6 +14,7 @@ import io.vertx.ext.web.handler.TimeoutHandler;
 import org.ignas.frauddetection.httpapi.integration.ProbabilityCalculatorIntegration;
 import org.ignas.frauddetection.httpapi.integration.RequestLoggerIntegration;
 import org.ignas.frauddetection.resultsanalyser.api.ResultLoggingRequest;
+import org.ignas.frauddetection.shared.DetectionStatus;
 import org.ignas.frauddetection.shared.OneWayServiceIntegration;
 
 public class EvaluationRequestController extends AbstractVerticle {
@@ -48,7 +49,7 @@ public class EvaluationRequestController extends AbstractVerticle {
         router.route(HttpMethod.POST, "/evaluate-fraud")
             .handler(BodyHandler.create())
             .handler(HTTPRequestValidationHandler.create().addJsonBodySchema(schemas.getEvaluationSchema()))
-            .handler(TimeoutHandler.create(DEFAULT_TIMEOUT, 500))
+            .handler(TimeoutHandler.create(DEFAULT_TIMEOUT, DetectionStatus.TIMEOUT))
             .handler(
                 new EvaluationRequestHandler(
                     new ProbabilityCalculatorIntegration(bus),
@@ -58,7 +59,7 @@ public class EvaluationRequestController extends AbstractVerticle {
 
         router.route(HttpMethod.POST, "/mark-fraudulent")
             .handler(BodyHandler.create())
-            .handler(TimeoutHandler.create(DEFAULT_TIMEOUT, 500))
+            .handler(TimeoutHandler.create(DEFAULT_TIMEOUT, DetectionStatus.TIMEOUT))
             .handler(HTTPRequestValidationHandler.create().addJsonBodySchema(schemas.getMarkingSchema()))
             .handler(
                 new FraudulentTransactionHandler(request -> bus.publish("evaluation-archive.marked-fraudulent", request))

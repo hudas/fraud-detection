@@ -7,6 +7,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.api.validation.ValidationException;
 import org.apache.http.HttpStatus;
 import org.ignas.frauddetection.httpapi.request.EvaluationRequest;
+import org.ignas.frauddetection.shared.DetectionStatus;
 
 public class EvaluationRequestFailureHandler implements Handler<RoutingContext> {
 
@@ -26,8 +27,13 @@ public class EvaluationRequestFailureHandler implements Handler<RoutingContext> 
                     .end("Internal error:\n" + context.failure().getMessage());
             }
         } else {
+            if (context.statusCode() == DetectionStatus.TIMEOUT) {
+                response.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR)
+                    .end("Internal server timeout");
+            }
+
             response.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR)
-                .end("Unknown Internal error");
+                .end("Unknown Internal error, status" + context.statusCode());
         }
     }
 }

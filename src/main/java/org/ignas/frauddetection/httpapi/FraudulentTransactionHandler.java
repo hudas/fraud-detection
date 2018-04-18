@@ -23,5 +23,11 @@ public class FraudulentTransactionHandler implements Handler<RoutingContext> {
         MarkRequest request = req.getBodyAsJson().mapTo(MarkRequest.class);
 
         preparationIntegration.publish(request.getTransactionId());
+
+        String responseRepresentation = "{ \"sucess\" : \"true\" }";
+
+        req.response()
+            .putHeader("content-type", "application/json")
+            .end(responseRepresentation);
     }
 }
