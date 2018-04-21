@@ -21,7 +21,12 @@ import org.ignas.frauddetection.transactionevaluation.service.GroupRiskEvaluator
 import org.ignas.frauddetection.transactionevaluation.service.LearningEventPublisher;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import static java.lang.Double.valueOf;
+import static java.lang.Math.pow;
 
 public class FraudEvaluationHandler implements Handler<Message<Object>> {
 
@@ -111,10 +116,47 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
 
 
     private Float calculateFraudProbability(Float fraudProbability, Map<String, Risk.Value> groupValues) {
-        return groupValues.entrySet()
+        List<Float> occurenceInFraudProbabilities = groupValues.entrySet()
             .stream()
-            .map(entry -> cache.getProbability(entry.getKey(), entry.getValue().name()))
+            .map(entry -> cache.getOccurenceInFraud(entry.getKey(), entry.getValue().name()))
+            .filter(it -> it != 0)
+            .collect(Collectors.toList());
+
+        int amountOfZeroRiskValuesInFraud = 4 - occurenceInFraudProbabilities.size();
+
+        Float occurrenceOfValuesInANDFraudProbability = occurenceInFraudProbabilities.stream()
             .reduce(fraudProbability, (result, increment) -> result * increment);
+
+        if (amountOfZeroRiskValuesInFraud != 0) {
+            occurrenceOfValuesInANDFraudProbability = valueOf(
+                pow(occurrenceOfValuesInANDFraudProbability, amountOfZeroRiskValuesInFraud)).floatValue();
+        }
+
+        List<Float> occurenceInNonFraudProbabilities = groupValues.entrySet()
+            .stream()
+            .map(entry -> cache.getOccurenceInNonFraud(entry.getKey(), entry.getValue().name()))
+            .filter(it -> it != 0)
+            .collect(Collectors.toList());
+
+        int amountOfZeroRiskValuesInNonFraud = 4 - occurenceInNonFraudProbabilities.size();
+
+        Float occurrenceOfValuesInANDNonFraudProbability = occurenceInNonFraudProbabilities.stream()
+            .reduce(1 - fraudProbability, (result, increment) -> result * increment);
+
+        // In case some probability is Zero risk,
+        //  instead of using zero in multiplication which would produce total zero result
+        //  we multiply probability by itself thus effectively reducing the probability
+        if (amountOfZeroRiskValuesInNonFraud != 0) {
+            occurrenceOfValuesInANDNonFraudProbability = valueOf(
+                pow(occurrenceOfValuesInANDNonFraudProbability, amountOfZeroRiskValuesInNonFraud)).floatValue();
+        }
+
+        if (occurrenceOfValuesInANDFraudProbability + occurrenceOfValuesInANDNonFraudProbability == 0) {
+            return 1f;
+        }
+
+        return occurrenceOfValuesInANDFraudProbability /
+            (occurrenceOfValuesInANDFraudProbability + occurrenceOfValuesInANDNonFraudProbability);
     }
 
 

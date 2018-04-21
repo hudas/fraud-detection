@@ -70,13 +70,13 @@ public class PersonalStatisticsStorage {
 
                 if (result == null) {
                     long end = System.currentTimeMillis();
-                    System.out.println("PersonalStatisticsStorage.fetchPersonalStats took: " + (end - start));
+                   // System.out.println("PersonalStatisticsStorage.fetchPersonalStats took: " + (end - start));
                     future.complete(null);
                     return;
                 }
 
                 long end = System.currentTimeMillis();
-                System.out.println("PersonalStatisticsStorage.initTotalsIfNotPresent took: " + (end - start));
+//                System.out.println("PersonalStatisticsStorage.initTotalsIfNotPresent took: " + (end - start));
                 future.complete(buildFromDocument(result));
             });
 

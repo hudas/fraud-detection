@@ -43,8 +43,6 @@ public class RequestLogsStorage {
     }
 
     private void flush() {
-        System.out.println("Flushing");
-
         List<Document> logsToFlush = new ArrayList<>();
 
         // We do not care that not all buffer can be flushed in single flush.

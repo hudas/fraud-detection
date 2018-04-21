@@ -10,9 +10,6 @@ public class SumStatistics {
     private float average;
     private float deviationAverage;
 
-    private float expected;
-    private float deviationExpected;
-
     public SumStatistics(int periodLength, float average, float deviationAverage) {
         this.periodLength = periodLength;
         this.average = average;

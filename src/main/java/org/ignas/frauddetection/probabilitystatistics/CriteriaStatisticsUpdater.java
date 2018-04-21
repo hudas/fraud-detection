@@ -3,6 +3,7 @@ package org.ignas.frauddetection.probabilitystatistics;
 
 import com.google.common.collect.ImmutableMap;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
@@ -28,9 +29,9 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
      *
      */
     private static final Map<String, Integer> POSSIBLE_COMBINATION_COUNTS = ImmutableMap.<String, Integer>builder()
-        .put("AMOUNT", 3125000)
-        .put("COUNT", 15625)
-        .put("TIME", 250)
+        .put("AMOUNT", 125000)
+        .put("COUNT", 125)
+        .put("TIME", 50)
         .put("LOCATION", 625)
         .build();
 
@@ -45,121 +46,104 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
         generalProbabilities = new GeneralProbabilitiesStorage(
             "mongodb://localhost", "bayes", "generalProbabilities");
 
-        Future<Void> initResult = storage.initTotalsIfNotPresent();
-
-        initResult.setHandler(result -> {
-            if (result.failed()) {
-                System.out.println("Failed to start vertice: CriteriaStatisticsUpdater\n" + result.cause().getMessage());
-                return;
-            }
-
-            EventBus bus = vertx.eventBus();
-
-            bus.consumer("probability-processing.criteria-data-updated", (batchEvent) -> {
-                if (!(batchEvent.body() instanceof BatchToProcess)) {
-                    throw new IllegalArgumentException("Invalid message type: " + batchEvent.body().getClass());
+        storage.initTotalsIfNotPresent()
+            .setHandler(result -> {
+                if (result.failed()) {
+                    System.out.println("Failed to start vertice: CriteriaStatisticsUpdater\n" + result.cause().getMessage());
+                    return;
                 }
 
-                Future<GeneralOccurrences> statsLoader = generalProbabilities.fetch("a");
+                EventBus bus = vertx.eventBus();
 
-                BatchToProcess batch = (BatchToProcess) batchEvent.body();
+                bus.consumer("probability-processing.criteria-data-updated", (batchEvent) -> {
+                    if (!(batchEvent.body() instanceof BatchToProcess)) {
+                        throw new IllegalArgumentException("Invalid message type: " + batchEvent.body().getClass());
+                    }
 
-                List<CombinationStatistics> groupCombinations = batch.getItems()
-                    .stream()
-                    .flatMap(request ->
-                        request.getGroupedCriteriaValues()
-                            .entrySet()
-                            .stream()
-                            .map(groupCriterias ->
-                                new CombinationStatistics(
-                                    groupCriterias.getKey(),
-                                    CriteriaValuesEncoder.encode(groupCriterias.getValue()),
-                                    !request.isAlreadyProcessedTransaction() ? 1 : 0,
-                                    request.isFraudulent() ? 1 : 0
+                    BatchToProcess batch = (BatchToProcess) batchEvent.body();
+
+                    List<CombinationStatistics> groupCombinations = batch.getItems()
+                        .stream()
+                        .flatMap(request ->
+                            request.getGroupedCriteriaValues()
+                                .entrySet()
+                                .stream()
+                                .map(groupCriterias ->
+                                    new CombinationStatistics(
+                                        groupCriterias.getKey(),
+                                        CriteriaValuesEncoder.encode(groupCriterias.getValue()),
+                                        !request.isAlreadyProcessedTransaction() ? 1 : 0,
+                                        request.isFraudulent() ? 1 : 0
+                                    )
                                 )
-                            )
-                    )
-                    .collect(Collectors.toList());
-
-                Future<Void> initLoader = storage.initCombinationsIfNotPresent(groupCombinations);
-
-                initLoader.setHandler(initFinished -> {
-                    List<CombinationStatistics> beforeUpdateStatistics = new ArrayList<>();
-                    Future statisticsLoaded = Future.future();
+                        )
+                        .collect(Collectors.toList());
 
                     List<CombinationStatistics> uniqueCombinations = groupCombinations
                         .stream()
                         .distinct()
                         .collect(Collectors.toList());
 
-                    uniqueCombinations.stream()
-                        .map(storage::fetchCombination)
-                        .forEach(future ->
-                            future.setHandler(statsLoaded -> {
-                                if (result.failed()) {
-                                    result.cause().printStackTrace();
-                                    throw new IllegalStateException(result.cause());
-                                }
-
-                                beforeUpdateStatistics.add(statsLoaded.result());
-
-                                if (beforeUpdateStatistics.size() == uniqueCombinations.size()) {
-                                    statisticsLoaded.complete();
-                                }
-                            }));
-
-                    statisticsLoaded.setHandler(loaded -> {
-                        storage.updateOccurences(groupCombinations);
-
-                        statsLoader.setHandler(totalStatsLoaded -> {
+                    generalProbabilities.fetch()
+                        .setHandler((totalStatsLoaded) -> {
                             if (totalStatsLoaded.failed()) {
+                                totalStatsLoaded.cause().printStackTrace();
                                 throw new IllegalStateException("Failed to load stats", totalStatsLoaded.cause());
                             }
 
                             GeneralOccurrences occurences = totalStatsLoaded.result();
 
-                            Future<Map<String, GroupTotalStats>> totalStatsLoader = storage.fetchTotalStats("A");
+                            storage.initCombinationsIfNotPresent(groupCombinations)
+                                .setHandler(initFinished -> {
+                                    if (initFinished.failed()) {
+                                        initFinished.cause().printStackTrace();
+                                        return;
+                                    }
 
-                            totalStatsLoader.setHandler(groupStatsLoaded -> {
-                                if (groupStatsLoaded.failed()) {
-                                    groupStatsLoaded.cause().printStackTrace();
-                                    throw new IllegalStateException(groupStatsLoaded.cause().getMessage());
-                                }
+                                    storage.fetchCombination(uniqueCombinations)
+                                        .setHandler(loaded -> {
+                                            if (loaded.failed()) {
+                                                loaded.cause().printStackTrace();
+                                                return;
+                                            }
 
-                                Map<String, GroupTotalStats> groupStats = groupStatsLoaded.result();
+                                            List<CombinationStatistics> beforeUpdateStatistics = loaded.result();
 
-                                Map<String, List<CombinationStatistics>> increments = groupCombinations.stream()
-                                    .collect(Collectors.groupingBy(CombinationStatistics::getGroup));
+                                            storage.updateOccurences(groupCombinations);
+                                            storage.fetchTotalStats("A").setHandler(groupStatsLoaded -> {
+                                                if (groupStatsLoaded.failed()) {
+                                                    groupStatsLoaded.cause().printStackTrace();
+                                                    throw new IllegalStateException(groupStatsLoaded.cause().getMessage());
+                                                }
 
-                                for (Map.Entry<String, GroupTotalStats> groupEntry : groupStats.entrySet()) {
-                                   long additionalOccurrences = increments.get(groupEntry.getKey())
-                                       .stream()
-                                       .mapToLong(CombinationStatistics::getFraudOccurences)
-                                       .sum();
+                                                Map<String, GroupTotalStats> groupStats = groupStatsLoaded.result();
 
-                                   List<CombinationStatistics> oldGroupStats = beforeUpdateStatistics.stream()
-                                       .filter(item -> item.getGroup().equals(groupEntry.getKey()))
-                                       .collect(Collectors.toList());
+                                                Map<String, List<CombinationStatistics>> increments = groupCombinations.stream()
+                                                    .collect(Collectors.groupingBy(CombinationStatistics::getGroup));
 
-                                   groupEntry.getValue()
-                                       .updateStatistics(
-                                           additionalOccurrences,
-                                           occurences.getTotalFraudTransactions(),
-                                           POSSIBLE_COMBINATION_COUNTS.get(groupEntry.getKey()),
-                                           increments.get(groupEntry.getKey()),
-                                           oldGroupStats
-                                       );
-                                }
+                                                for (Map.Entry<String, GroupTotalStats> groupEntry : groupStats.entrySet()) {
+                                                    List<CombinationStatistics> oldGroupStats = beforeUpdateStatistics.stream()
+                                                        .filter(item -> item.getGroup().equals(groupEntry.getKey()))
+                                                        .collect(Collectors.toList());
 
-                                storage.updateTotals(groupStats);
-                            });
+                                                    groupEntry.getValue()
+                                                        .updateStatistics(
+                                                            occurences.getTotalFraudTransactions(),
+                                                            POSSIBLE_COMBINATION_COUNTS.get(groupEntry.getKey()),
+                                                            increments.get(groupEntry.getKey()),
+                                                            oldGroupStats
+                                                        );
+                                                }
+
+                                                storage.updateTotals(groupStats);
+                                            });
+                                        });
+                                    });
+                                });
                         });
-                    });
                 });
-            });
 
-            startFuture.complete();
-        });
+        startFuture.complete();
     }
 
     @Override

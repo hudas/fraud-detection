@@ -20,7 +20,8 @@ public class ProbabilityCalculatorIntegration implements ServiceIntegration<Eval
     public Future<Float> load(EvaluationRequest request) {
         Future<Float> loader = Future.future();
 
-        bus.send(RESOLVER_ADDRESS, toResolverAPI(request), reply -> {
+        DeliveryOptions options = new DeliveryOptions().setSendTimeout(300000);
+        bus.send(RESOLVER_ADDRESS, toResolverAPI(request), options, reply -> {
 
             if (reply.failed()) {
                 System.out.println("ProbabilityCalculatorIntegration" + reply.cause().getMessage());

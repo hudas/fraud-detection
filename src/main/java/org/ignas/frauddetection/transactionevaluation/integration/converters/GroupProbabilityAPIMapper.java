@@ -28,14 +28,14 @@ public class GroupProbabilityAPIMapper {
         return new CriteriaGroupProbabilityRequest(groups);
     }
 
-    public static Map<String, CriteriaGroup> mapResponse(BayesTable result) {
-        if (result == null || result.getTable() == null) {
-            return ImmutableMap.of();
-        }
-
-        return result.getTable()
-            .entrySet()
-            .stream()
-            .collect(toMap(Map.Entry::getKey, entry -> new CriteriaGroup(entry.getValue())));
-    }
+//    public static Map<String, CriteriaGroup> mapResponse(BayesTable result) {
+//        if (result == null || result.getFraudProbabilities() == null || result.getNonFraudProbabilities() == null) {
+//            return ImmutableMap.of();
+//        }
+//
+//        return result.getTable()
+//            .entrySet()
+//            .stream()
+//            .collect(toMap(Map.Entry::getKey, entry -> new CriteriaGroup(entry.getValue())));
+//    }
 }

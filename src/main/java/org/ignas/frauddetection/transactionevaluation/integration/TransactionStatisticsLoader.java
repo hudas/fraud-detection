@@ -1,6 +1,7 @@
 package org.ignas.frauddetection.transactionevaluation.integration;
 
 import io.vertx.core.Future;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import org.ignas.frauddetection.shared.ServiceIntegration;
 import org.ignas.frauddetection.transactionevaluation.domain.Transaction;
@@ -26,7 +27,8 @@ public class TransactionStatisticsLoader implements ServiceIntegration<Transacti
     public Future<HistoricalData> load(Transaction request) {
         Future<HistoricalData> loader = Future.future();
 
-        bus.send("transaction-statistic.archive", mapRequest(request), statisticsResponse -> {
+        DeliveryOptions options = new DeliveryOptions().setSendTimeout(300000);
+        bus.send("transaction-statistic.archive", mapRequest(request), options, statisticsResponse -> {
 
             if (statisticsResponse.failed()) {
                 System.out.println("ProbabilityCalculatorIntegration" + statisticsResponse.cause().getMessage());

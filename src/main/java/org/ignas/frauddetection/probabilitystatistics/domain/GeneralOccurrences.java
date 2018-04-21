@@ -18,6 +18,10 @@ public class GeneralOccurrences {
         return totalFraudTransactions;
     }
 
+    public long getTotalNonFraudTransactions() {
+        return totalTransactions - totalFraudTransactions;
+    }
+
     public float getFraudProbability() {
         if (totalTransactions == 0) {
             return 0f;

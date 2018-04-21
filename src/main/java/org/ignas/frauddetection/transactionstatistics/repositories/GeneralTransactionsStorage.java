@@ -91,7 +91,7 @@ public class GeneralTransactionsStorage {
             );
 
             long end = System.currentTimeMillis();
-            System.out.println("GeneralProbabilitiesStorage.fetch" + (end - start));
+//            System.out.println("GeneralProbabilitiesStorage.fetch" + (end - start));
             loader.complete(stats);
         });
 

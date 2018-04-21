@@ -28,26 +28,27 @@ public class CriteriaProbabilityLoader implements ServiceIntegration<CriteriaCon
         Future<ProbabilityStatistics> loader = Future.future();
 
         long start = System.currentTimeMillis();
-        DeliveryOptions options = new DeliveryOptions().setSendTimeout(3000);
+
+        DeliveryOptions options = new DeliveryOptions().setSendTimeout(300000);
         bus.send(ARCHIVE_ADDRESS, new CriteriaProbabilityRequest(request), options, criteriaResponse -> {
 
             if (criteriaResponse.failed()) {
                 criteriaResponse.cause().printStackTrace();
 
                 long end = System.currentTimeMillis();
-                System.out.println("CriteriaProbabilityLoader.load TOOK:" + (end-start) + " And failed Transaction: " + request.getTransactionId());
+//                System.out.println("CriteriaProbabilityLoader.load TOOK:" + (end-start) + " And failed Transaction: " + request.getTransactionId());
                 loader.fail(criteriaResponse.cause());
                 return;
             }
 
 
             if (!(criteriaResponse.result().body() instanceof ProbabilityStatistics)) {
-                loader.fail("Unsupported message type: " + criteriaResponse.result().getClass());
+                //loader.fail("Unsupported message type: " + criteriaResponse.result().getClass());
                 return;
             }
 
             long end = System.currentTimeMillis();
-            System.out.println("CriteriaProbabilityLoader.load TOOK:" + (end-start) + "                Transaction: " + request.getTransactionId());
+//            System.out.println("CriteriaProbabilityLoader.load TOOK:" + (end-start) + "                Transaction: " + request.getTransactionId());
             loader.complete((ProbabilityStatistics) criteriaResponse.result().body());
         });
 

@@ -29,20 +29,23 @@ public class Risk {
 
     private String groupName;
 
-    private List<Float> groupCriteriaProbabilities;
+    private List<Float> fraudProbabilities;
+    private List<Float> nonFraudProbabilities;
 
     private float averageGroupProbability;
     private float deviationFromAverage;
 
     public Risk(
         String groupName,
-        List<Float> groupCriteriaProbabilities,
+        List<Float> fraudProbabilities,
+        List<Float> nonFraudProbabilities,
         float averageGroupProbability,
         float deviationFromAverage) {
 
         this.groupName = groupName;
-        this.groupCriteriaProbabilities = groupCriteriaProbabilities;
+        this.fraudProbabilities = fraudProbabilities;
         this.averageGroupProbability = averageGroupProbability;
+        this.nonFraudProbabilities = nonFraudProbabilities;
         this.deviationFromAverage = deviationFromAverage;
     }
 
@@ -51,27 +54,35 @@ public class Risk {
     }
 
     public Value evaluate(Float generalFraudRate) {
-        Float probabilityOfCriteriaCombinationInFraudOccurences = generalFraudRate * groupCriteriaProbabilities.stream()
+        Float probabilityOfCriteriaCombinationInFraudOccurences = generalFraudRate * fraudProbabilities.stream()
+            .filter(probability -> probability != 0)
             .reduce((result, criteria) -> result * criteria)
             .orElse(0f);
 
         if (averageGroupProbability == 0 && probabilityOfCriteriaCombinationInFraudOccurences > 0) {
-            return Value.VERY_HIGH_RISK;
+            return Value.EXPECTED_RISK;
         }
 
         if (deviationFromAverage == 0) {
             if (averageGroupProbability != probabilityOfCriteriaCombinationInFraudOccurences) {
-                return Value.VERY_HIGH_RISK;
+                return Value.EXPECTED_RISK;
             } else {
                 return Value.EXPECTED_RISK;
             }
         }
 
+        Float probabilityOfCriteriaCombinationInNonFraudOccurences = (1 - generalFraudRate) * nonFraudProbabilities.stream()
+            .filter(probability -> probability != 0)
+            .reduce((result, criteria) -> result * criteria)
+            .orElse(0f);
 
-        Float ratioOfActualAndGeneralProbability =
-            (averageGroupProbability - probabilityOfCriteriaCombinationInFraudOccurences)
-                / deviationFromAverage;
+        Float probability = probabilityOfCriteriaCombinationInFraudOccurences /
+            (probabilityOfCriteriaCombinationInFraudOccurences + probabilityOfCriteriaCombinationInNonFraudOccurences);
 
+
+        Float ratioOfActualAndGeneralProbability = (probability - averageGroupProbability) / deviationFromAverage;
+
+//        System.out.println(groupName + " Riskrate: " + ratioOfActualAndGeneralProbability + " Average: " + averageGroupProbability + " Actual " + probabilityOfCriteriaCombinationInFraudOccurences);
         return Arrays.stream(Value.values())
             .filter(value -> value.abstracts(ratioOfActualAndGeneralProbability))
             .findAny()

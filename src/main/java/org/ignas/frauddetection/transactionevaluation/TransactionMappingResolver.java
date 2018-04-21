@@ -17,7 +17,7 @@ import org.ignas.frauddetection.transactionevaluation.integration.TransactionSta
 
 public class TransactionMappingResolver extends AbstractVerticle {
 
-    public static final int CACHE_TTL = 10000;
+    public static final int CACHE_TTL = 100;
 
     @Override
     public void start(Future<Void> setupFuture) {

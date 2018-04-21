@@ -39,7 +39,7 @@ public class DetectionLauncher implements VertxLifecycleHooks {
             .add(new TransactionStatisticArchive())
             .add(new ProbabilityStatisticsArchive())
             .add(new ResultsAnalyser())
-            .add(new ProbabilityStatisticsProcessor())
+            .add(new ProbabilityLearningBatcher())
             .add(new CriteriaUpdater())
             .add(new CriteriaGroupUpdater())
             .add(new GeneralDataUpdater())

@@ -45,9 +45,7 @@ public class CriteriaProbabilitiesHandler implements Handler<Message<Object>> {
 
         CriteriaProbabilityRequest request = (CriteriaProbabilityRequest) message.body();
 
-        System.out.println("CriteriaProbabilitiesHandler: Received: " + request.getTransactionId());
-
-        Future<GeneralOccurrences> generalLoader = generalProbabilitiesStorage.fetch(request.getTransactionId());
+        Future<GeneralOccurrences> generalLoader = generalProbabilitiesStorage.fetch();
         Future<List<CriteriaStatistics>> criteriaLoader = criteriaStorage.fetchStatistics(request.getTransactionId(), request.getCriteriaValues());
         Future<Map<String, GroupTotalStats>> groupLoader = groupStatisticsStorage.fetchTotalStats(request.getTransactionId());
 
@@ -58,7 +56,7 @@ public class CriteriaProbabilitiesHandler implements Handler<Message<Object>> {
                 if (loaded.failed()) {
                     loaded.cause().printStackTrace();
 
-                    System.out.println("CriteriaProbabilitiesHandler:    Failed: " + request.getTransactionId());
+//                    System.out.println("CriteriaProbabilitiesHandler:    Failed: " + request.getTransactionId());
                     message.fail(500, loaded.cause().getMessage());
                     return;
                 }
@@ -68,8 +66,6 @@ public class CriteriaProbabilitiesHandler implements Handler<Message<Object>> {
                 Map<String, GroupTotalStats> group = loaded.result().resultAt(2);
 
                 ProbabilityStatistics result = buildProbabilityStatistics(request.getCriteriaValues(), general, criteria, group);
-
-                System.out.println("CriteriaProbabilitiesHandler:  Finished: " + request.getTransactionId());
 
                 message.reply(result);
             });
@@ -85,6 +81,9 @@ public class CriteriaProbabilitiesHandler implements Handler<Message<Object>> {
 
         Map<String, Float> criteriaProbabilities =
             collectCriteriaProbabilities(criteria, general.getTotalFraudTransactions());
+
+        Map<String, Float> criteriaNonFraudProbabilities =
+            collectCriteriaNonFraudProbabilities(criteria, general.getTotalNonFraudTransactions());
 
         fillWithDefaults(criteriaProbabilities, criteriaValues);
 
@@ -108,6 +107,7 @@ public class CriteriaProbabilitiesHandler implements Handler<Message<Object>> {
         return new ProbabilityStatistics(
             fraudProbability,
             criteriaProbabilities,
+            criteriaNonFraudProbabilities,
             groupRisks
         );
     }
@@ -130,6 +130,28 @@ public class CriteriaProbabilitiesHandler implements Handler<Message<Object>> {
             }
 
             builder.put(stats.getName(), probabilityOfCriteriaValueInFraud);
+        });
+
+        return builder.build();
+    }
+
+    private Map<String, Float> collectCriteriaNonFraudProbabilities(
+        List<CriteriaStatistics> criteria,
+        long totalNonFraudTransactions) {
+
+        ImmutableMap.Builder<String, Float> builder = ImmutableMap.<String, Float>builder();
+
+        criteria.forEach(stats -> {
+
+            final float probabilityOfCriteriaValueInNonFraud;
+
+            if (totalNonFraudTransactions == 0) {
+                probabilityOfCriteriaValueInNonFraud = 0;
+            } else {
+                probabilityOfCriteriaValueInNonFraud = ((float) stats.getOccurrences()) / totalNonFraudTransactions;
+            }
+
+            builder.put(stats.getName(), probabilityOfCriteriaValueInNonFraud);
         });
 
         return builder.build();

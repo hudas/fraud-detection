@@ -11,9 +11,9 @@ import org.ignas.frauddetection.transactionevaluation.api.request.LearningReques
 
 import java.util.Map;
 
-public class ProbabilityStatisticsProcessor extends AbstractVerticle {
+public class ProbabilityLearningBatcher extends AbstractVerticle {
 
-    public static final int BATCH_SIZE = 5;
+    public static final int BATCH_SIZE = 1;
 
     @Override
     public void start() {

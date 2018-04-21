@@ -219,7 +219,7 @@ public class TransactionStatisticArchive extends AbstractVerticle {
         }
 
         float averageDistanceLast = calcAverage(nonPeriodicStats.getSumOfDistanceFromLast(), nonPeriodicStats.getInstances());
-        float deviationDistanceLast = calcDeviation(nonPeriodicStats.getInstances(), averageDistanceLast, nonPeriodicStats.getSumOfDistanceFromLast(), nonPeriodicStats.getSumOfSquaredTimeDiffFromLast());
+        float deviationDistanceLast = calcDeviation(nonPeriodicStats.getInstances(), averageDistanceLast, nonPeriodicStats.getSumOfDistanceFromLast(), nonPeriodicStats.getSumOfSquaredDistanceFromLast());
 
         return new DistanceDifferenceStatistics(averageDistanceLast, deviationDistanceLast);
     }

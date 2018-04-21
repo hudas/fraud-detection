@@ -82,7 +82,7 @@ public class ConditionStorage {
             });
 
         Future<ConditionOccurrences> timeLoader = Future.future();
-        timeConditions.find(eq(ID_FIELD, hour.getHourOfDay()))
+        timeConditions.find(eq(ID_FIELD, hour.getHourOfDay() + ""))
             .first((result, t) -> {
                 if (t != null) {
                     t.printStackTrace();
@@ -145,7 +145,7 @@ public class ConditionStorage {
                     return;
                 }
 
-                if (result == null) {
+                if (result == null && !totals.isFullyDefined()) {
                     totalsLoader.complete(ConditionTotals.unknown());
                     return;
                 }
@@ -347,8 +347,11 @@ public class ConditionStorage {
             }
 
             float incrementedOccurences = previousValue.getOccurrences() + increment.getOccurrences();
-            float incrementedFraudOccurences = previousValue.getFraudOccurrences() + increment.getFraudOccurrences();
 
+            if (incrementedOccurences == 0) {
+                System.out.println("FOUND YOU");
+            }
+            float incrementedFraudOccurences = previousValue.getFraudOccurrences() + increment.getFraudOccurrences();
             float newRate = incrementedFraudOccurences / incrementedOccurences;
 
             sumDiff += newRate - previousRate;

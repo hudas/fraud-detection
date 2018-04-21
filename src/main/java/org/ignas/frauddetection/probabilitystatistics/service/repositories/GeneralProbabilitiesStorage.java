@@ -36,7 +36,7 @@ public class GeneralProbabilitiesStorage {
         );
     }
 
-    public Future<GeneralOccurrences> fetch(String transaction) {
+    public Future<GeneralOccurrences> fetch() {
         long start = System.currentTimeMillis();
 
         Future<GeneralOccurrences> loader = Future.future();
@@ -52,15 +52,11 @@ public class GeneralProbabilitiesStorage {
 //            Initial system launch, without data yet available
             if (result == null) {
                 long end = System.currentTimeMillis();
-                System.out.println("GeneralProbabilitiesStorage.fetch Took:" + (end - start) + " FOR TRANSACTION: " + transaction);
-
                 loader.complete(new GeneralOccurrences(0, 0));
                 return;
             }
 
             long end = System.currentTimeMillis();
-            System.out.println("GeneralProbabilitiesStorage.fetch Took:" + (end - start) + " FOR TRANSACTION: " + transaction);
-
             loader.complete(
                 new GeneralOccurrences(
                     result.getLong("totalTransactions"),

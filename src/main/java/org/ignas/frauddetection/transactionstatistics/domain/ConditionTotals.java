@@ -39,4 +39,8 @@ public class ConditionTotals {
     public ConditionTotalValue getLocationTotal() {
         return locationTotal;
     }
+
+    public boolean isFullyDefined() {
+        return creditorTotal != null && timeTotal != null && locationTotal != null;
+    }
 }

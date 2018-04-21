@@ -7,6 +7,7 @@ import org.ignas.frauddetection.transactionevaluation.domain.Transaction;
 import org.ignas.frauddetection.transactionevaluation.domain.calculation.MapperResult;
 import org.ignas.frauddetection.transactionevaluation.domain.calculation.criteria.NamedCriteria;
 import org.ignas.frauddetection.transactionevaluation.domain.calculation.criteria.PeriodicCriteria;
+import org.ignas.frauddetection.transactionevaluation.domain.calculation.evaluators.AmplifiedDeviationEvaluator;
 import org.ignas.frauddetection.transactionevaluation.domain.calculation.evaluators.ComparableStatistics;
 import org.ignas.frauddetection.transactionevaluation.domain.calculation.evaluators.DeviationEvaluator;
 import org.ignas.frauddetection.transactionevaluation.domain.calculation.evaluators.DeviationStatistics;
@@ -56,7 +57,7 @@ public class FraudCriteriaConfig {
 
     private static NamedCriteria defineCreditorCriterion() {
         return new NamedCriteria.Builder<DeviationStatistics>("CREDITOR_RISK", LOCATION_GROUP)
-            .calculator(new DeviationEvaluator())
+            .calculator(new AmplifiedDeviationEvaluator())
             .mapper((Transaction transaction, HistoricalData statistics) -> {
                 FraudRate creditor = statistics.getEnvironment().getCreditor();
 
@@ -71,7 +72,7 @@ public class FraudCriteriaConfig {
 
     private NamedCriteria defineLocationCriterion() {
         return new NamedCriteria.Builder<DeviationStatistics>("LOCATION_RISK", LOCATION_GROUP)
-            .calculator(new DeviationEvaluator())
+            .calculator(new AmplifiedDeviationEvaluator())
             .mapper((Transaction transaction, HistoricalData statistics) -> {
                 FraudRate location = statistics.getEnvironment().getLocation();
 
@@ -155,7 +156,7 @@ public class FraudCriteriaConfig {
 
     private static NamedCriteria defineTimeRiskCriterion() {
         return new NamedCriteria.Builder<DeviationStatistics>("TIME_RISK", TIME_GROUP)
-            .calculator(new DeviationEvaluator())
+            .calculator(new AmplifiedDeviationEvaluator())
             .mapper((Transaction transaction, HistoricalData statistics) -> {
                 FraudRate time = statistics.getEnvironment().getTime();
 
@@ -292,9 +293,14 @@ public class FraudCriteriaConfig {
             .period(Days.days(1), Days.SEVEN, Days.days(30))
             .calculator(new DeviationEvaluator())
             .mapper((Days period, Transaction transaction, HistoricalData statistics) -> {
-                float totalAmountForPeriod = transaction.getAmount() + statistics.getDebtor().getExpensesForPeriod(period);
+                float expensesForPeriod = statistics.getDebtor().getExpensesForPeriod(period);
 
-                float amountRatio = transaction.getAmount() / totalAmountForPeriod;
+                final float amountRatio;
+                if (expensesForPeriod == 0) {
+                    amountRatio = 1;
+                } else {
+                    amountRatio = transaction.getAmount() / expensesForPeriod;
+                }
 
                 MeanPeriodStatistics<Float> globalRatioDetails = statistics.getGlobal()
                     .ratioStatisticsForPeriod(period);

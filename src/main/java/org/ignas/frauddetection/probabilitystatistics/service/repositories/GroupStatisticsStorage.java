@@ -7,6 +7,7 @@ import com.mongodb.async.client.MongoCollection;
 import com.mongodb.client.model.*;
 import io.vertx.core.Future;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.ignas.frauddetection.probabilitystatistics.domain.CombinationStatistics;
 import org.ignas.frauddetection.probabilitystatistics.domain.GroupTotalStats;
 
@@ -42,33 +43,52 @@ public class GroupStatisticsStorage {
             .getCollection(collection);
     }
 
-    public Future<CombinationStatistics> fetchCombination(CombinationStatistics combination) {
-        long start = System.currentTimeMillis();
+    public Future<List<CombinationStatistics>> fetchCombination(List<CombinationStatistics> combinations) {
+        Future<List<CombinationStatistics>> loader = Future.future();
 
-        Future<CombinationStatistics> loader = Future.future();
+        List<Bson> filters = combinations.stream()
+            .map(combination -> and(
+                eq(NAME_FIELD, combination.getGroup()),
+                eq(COMBINATIONS_DOC + "." + CODE_FIELD, combination.getCode()))
+            )
+            .collect(Collectors.toList());
 
-        groupStatistics.find(and(eq(NAME_FIELD, combination.getGroup()), eq(COMBINATIONS_DOC + "." + CODE_FIELD, combination.getCode())))
-            .projection(Projections.include(NAME_FIELD, COMBINATIONS_DOC + ".$"))
-            .first((result, t) -> {
-                if (t != null) {
-                    t.printStackTrace();
-                    loader.fail(t);
-                    return;
+        List<CombinationStatistics> statisticsResults = new ArrayList<>();
+
+        groupStatistics.find(Filters.or(filters))
+            .projection(Projections.include(NAME_FIELD, COMBINATIONS_DOC))
+            .forEach((singleDoc) -> {
+                String groupName = singleDoc.getString(NAME_FIELD);
+
+                List<Document> combinationsDocuments = (List <Document>) singleDoc.get(COMBINATIONS_DOC);
+                for (Document combinationDoc : combinationsDocuments) {
+                    String code = combinationDoc.getString(CODE_FIELD);
+
+                    boolean requested = combinations.stream()
+                        .anyMatch(it -> it.getGroup().equals(groupName) && it.getCode().equals(code));
+
+                    if (!requested) {
+                        continue;
+                    }
+
+                    statisticsResults.add(
+                        new CombinationStatistics(
+                            groupName,
+                            code,
+                            combinationDoc.getLong(OCCURENCES_FIELD),
+                            combinationDoc.getLong(FRAUD_OCCURENCES_FIELD)
+                        )
+                    );
+
                 }
+                }, (result, t) -> {
+                    if (t != null) {
+                        t.printStackTrace();
+                        loader.fail(t);
+                        return;
+                    }
 
-                Document loadedCombination = getFirst((List <Document>) result.get(COMBINATIONS_DOC), null);
-
-                long end = System.currentTimeMillis();
-
-                System.out.println("GroupStatisticsStorage.fetchCombination took: " + (end - start));
-                loader.complete(
-                    new CombinationStatistics(
-                        combination.getGroup(),
-                        combination.getCode(),
-                        loadedCombination.getLong(OCCURENCES_FIELD),
-                        loadedCombination.getLong(FRAUD_OCCURENCES_FIELD)
-                    )
-                );
+                loader.complete(statisticsResults);
             });
 
         return loader;
@@ -106,7 +126,6 @@ public class GroupStatisticsStorage {
                     }
 
                     long end = System.currentTimeMillis();
-                    System.out.println("GroupStatisticsStorage.fetchCombination took: " + (end - start) + " FOR TRANSACTION " + transaction);
                     loader.complete(resultMap);
                 }
             );
@@ -157,7 +176,7 @@ public class GroupStatisticsStorage {
 
 
             long end = System.currentTimeMillis();
-            System.out.println("GroupStatisticsStorage.initCombinationsIfNotPresent took: " + (end - start));
+//            System.out.println("GroupStatisticsStorage.initCombinationsIfNotPresent took: " + (end - start));
             loader.complete();
         }));
 
@@ -206,7 +225,6 @@ public class GroupStatisticsStorage {
 
 
             long end = System.currentTimeMillis();
-            System.out.println("GroupStatisticsStorage.initTotalsIfNotPresent took: " + (end - start));
             loader.complete();
         });
 
@@ -220,7 +238,7 @@ public class GroupStatisticsStorage {
             updates.add(
                 new UpdateOneModel<Document>(
                     Filters.eq(NAME_FIELD, total.getKey()),
-                    new Document("$inc",
+                    new Document("$set",
                         new Document(TOTALS_DOC + "." + AVERAGE_PROBABILITY_FIELD, total.getValue().getAverageProbability())
                             .append(TOTALS_DOC + "." + DEVIATION_PROBABILITY_FIELD, total.getValue().getDeviationProbability())
                             .append(TOTALS_DOC + "." + OCCURRENCES_SUM_FIELD, total.getValue().getSumOfOccurencesInFraud())

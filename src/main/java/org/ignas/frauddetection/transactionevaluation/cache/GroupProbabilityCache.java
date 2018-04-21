@@ -1,10 +1,12 @@
 package org.ignas.frauddetection.transactionevaluation.cache;
 
 import io.vertx.core.Future;
+import org.ignas.frauddetection.probabilitystatistics.api.response.BayesTable;
 import org.ignas.frauddetection.shared.FraudCriteriaGroup;
 import org.ignas.frauddetection.shared.ServiceIntegration;
 import org.ignas.frauddetection.transactionevaluation.domain.CriteriaGroup;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -17,11 +19,11 @@ import java.util.stream.Collectors;
  */
 public class GroupProbabilityCache {
 
-    private Map<String, CriteriaGroup> CACHED_VALUES;
+    private BayesTable CACHED_VALUES;
 
-    private ServiceIntegration<List<String>, Map<String, CriteriaGroup>> loader;
+    private ServiceIntegration<List<String>, BayesTable> loader;
 
-    public GroupProbabilityCache(ServiceIntegration<List<String>, Map<String, CriteriaGroup>> loader) {
+    public GroupProbabilityCache(ServiceIntegration<List<String>, BayesTable> loader) {
         this.loader = loader;
     }
 
@@ -43,12 +45,20 @@ public class GroupProbabilityCache {
         return future;
     }
 
-    public Float getProbability(String group, String eventValue) {
+    public Float getOccurenceInNonFraud(String group, String eventValue) {
         if (CACHED_VALUES == null) {
             throw new IllegalStateException("Not cached yet");
         }
 
-        return CACHED_VALUES.get(group).eventProbability(eventValue);
+        return CACHED_VALUES.getNonFraudProbabilities().get(group).get(eventValue);
+    }
+
+    public Float getOccurenceInFraud(String group, String eventValue) {
+        if (CACHED_VALUES == null) {
+            throw new IllegalStateException("Not cached yet");
+        }
+
+        return CACHED_VALUES.getFraudProbabilities().get(group).get(eventValue);
     }
 
     private List<String> getCriteriaGroupNames() {

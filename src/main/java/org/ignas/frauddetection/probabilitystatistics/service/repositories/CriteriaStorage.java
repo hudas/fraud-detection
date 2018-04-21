@@ -27,6 +27,8 @@ public class CriteriaStorage {
     private static final String OCCURRENCES_FIELD = "totalOccurrences";
     private static final String OCCURRENCES_IN_FRAUD_FIELD = "occurrencesInFraud";
     public static final String NAME_FIELD = "name";
+    public static final String VALUE_NAME_FIELD = "name";
+    public static final String VALUES_OBJECT = "values";
 
     private MongoClient client;
 
@@ -79,33 +81,43 @@ public class CriteriaStorage {
 
         List<Bson> criteriaFilters = criteriaValues.entrySet()
             .stream()
-            .map(criterion -> and(eq("name", criterion.getKey()), eq("values.$.name", criterion.getValue())))
+            .map(criterion -> and(eq("name", criterion.getKey()), eq("values.name", criterion.getValue())))
             .collect(Collectors.toList());
 
 
         criteriaProbabilities.find(Filters.or(criteriaFilters))
-            .projection(Projections.include("name", "values.$"))
+            .projection(Projections.include("name", "values"))
             .forEach(
                 document -> {
                     String name = document.getString(NAME_FIELD);
 
-                    Document values = Iterables.getFirst((List< Document >) document.get("values"), null);
+                    List<Document> values = (List<Document>) document.get("values");
+
                     if (values == null) {
                         totalLoader.fail(new IllegalStateException("Values missing for criteria: " + name));
                         throw new IllegalStateException("Values missing for criteria: " + name);
                     }
 
-                    String value = values.getString(NAME_FIELD);
 
+                    for (Document valueDoc: values) {
 
-                    loadedStatistics.add(new CriteriaStatistics(
-                            name,
-                            value,
-                            values.getLong(OCCURRENCES_FIELD),
-                            values.getLong(OCCURRENCES_IN_FRAUD_FIELD)
-                        )
-                    );
+                        String value = valueDoc.getString(NAME_FIELD);
 
+                        boolean requested = criteriaValues.entrySet().stream()
+                            .anyMatch(it -> name.equals(it.getKey()) && value.equals(it.getValue()));
+
+                        if (!requested) {
+                            continue;
+                        }
+
+                        loadedStatistics.add(new CriteriaStatistics(
+                                name,
+                                value,
+                                valueDoc.getLong(OCCURRENCES_FIELD),
+                                valueDoc.getLong(OCCURRENCES_IN_FRAUD_FIELD)
+                            )
+                        );
+                    }
                 },
                 (result, t) -> {
                     if (t != null) {
@@ -152,7 +164,13 @@ public class CriteriaStorage {
      *
      */
     public void persist(List<CriteriaUpdate> changes) {
+        List<CriteriaUpdate> documentInsertions = new ArrayList<>();
+
         List<UpdateOneModel<Document>> emptyDocumentPopulation = changes.stream()
+            .filter(update -> documentInsertions.stream()
+                .noneMatch(insertion -> insertion.targetCriteria().equals(update.targetCriteria()))
+            )
+            .peek(documentInsertions::add)
             .map(CriteriaStorage::mapToDocumentCreation)
             .collect(Collectors.toList());
 
@@ -206,9 +224,9 @@ public class CriteriaStorage {
      * @return
      */
     private static UpdateOneModel<Document> mapToDocumentCreation(CriteriaUpdate update) {
-        Document filter = new Document("name", update.targetCriteria());
-        Document updateOperation = new Document("name", update.targetCriteria())
-            .append("values", new ArrayList<>());
+        Document filter = new Document(NAME_FIELD, update.targetCriteria());
+        Document updateOperation = new Document(NAME_FIELD, update.targetCriteria())
+            .append(VALUES_OBJECT, new ArrayList<>());
 
         return new UpdateOneModel<>(
             filter,
@@ -231,10 +249,10 @@ public class CriteriaStorage {
      */
     private static UpdateOneModel<Document> mapToValueCreation(CriteriaUpdate update) {
         return new UpdateOneModel<>(
-            new Document("name", update.targetCriteria())
-                .append("values", new Document("$not", new Document("$elemMatch", new Document("name", update.criteriaValue())))),
-
-            new Document("$addToSet", new Document("values", new Document("name", update.criteriaValue())))
+            new Document(NAME_FIELD, update.targetCriteria())
+                .append(VALUES_OBJECT,
+                    new Document("$not", new Document("$elemMatch", new Document(VALUE_NAME_FIELD, update.criteriaValue())))),
+            new Document("$addToSet", new Document(VALUES_OBJECT, new Document(VALUE_NAME_FIELD, update.criteriaValue())))
         );
     }
 
@@ -246,7 +264,7 @@ public class CriteriaStorage {
      * @return
      */
     private static UpdateOneModel<Document> mapToMongoOperation(CriteriaUpdate update) {
-        Document filter = new Document("name", update.targetCriteria())
+        Document filter = new Document(NAME_FIELD, update.targetCriteria())
             .append("values.name", update.criteriaValue());
 
         Document updateOperation = buildOperation(update);

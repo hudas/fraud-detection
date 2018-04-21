@@ -38,7 +38,7 @@ public class GroupProbabilitiesHandler implements Handler<Message<Object>> {
 
         CriteriaGroupProbabilityRequest probabilityRequest = (CriteriaGroupProbabilityRequest) message.body();
 
-        Future<GeneralOccurrences> generalLoader = generalProbabilitiesStorage.fetch("a");
+        Future<GeneralOccurrences> generalLoader = generalProbabilitiesStorage.fetch();
 
         Future<List<CriteriaStatistics>> groupStatsLoader =
             groupStorage.fetchValues(probabilityRequest.getGroups());
@@ -64,21 +64,39 @@ public class GroupProbabilitiesHandler implements Handler<Message<Object>> {
         List<CriteriaStatistics> stats,
         List<String> requestedGroups) {
 
-        Map<String, Map<String, Float>> tableValues = new HashMap<>();
+        Map<String, Map<String, Float>> probabilityOfOccurenceInFraud = new HashMap<>();
+        Map<String, Map<String, Float>> probabilityOfOccurenceInNonFraud = new HashMap<>();
 
         stats.forEach(criterion -> {
-            Map<String, Float> criteriaValues = tableValues.computeIfAbsent(
+            Map<String, Float> inFraudProbabilities = probabilityOfOccurenceInFraud.computeIfAbsent(
                 criterion.getName(), k -> new HashMap<>());
 
-            float occurrenceInFraudProbability =
-                ((float) criterion.getFraudOccurrences()) / general.getTotalTransactions();
+            final float occurrenceInFraudProbability;
+            if (general.getTotalFraudTransactions() == 0) {
+                occurrenceInFraudProbability = 0f;
+            } else {
+                occurrenceInFraudProbability = ((float) criterion.getFraudOccurrences()) / general.getTotalFraudTransactions();
+            }
 
-            criteriaValues.put(criterion.getValue(), occurrenceInFraudProbability);
+            inFraudProbabilities.put(criterion.getValue(), occurrenceInFraudProbability);
+
+            Map<String, Float> inNonFraudProbabilities = probabilityOfOccurenceInNonFraud.computeIfAbsent(
+                criterion.getName(), k -> new HashMap<>());
+
+            final float occurrenceInNonFraudProbability;
+            if (general.getTotalNonFraudTransactions() == 0) {
+                occurrenceInNonFraudProbability = 0f;
+            } else {
+                occurrenceInNonFraudProbability = ((float) criterion.getNonFraudOccurences()) / general.getTotalNonFraudTransactions();
+            }
+
+            inNonFraudProbabilities.put(criterion.getValue(), occurrenceInNonFraudProbability);
         });
 
-        fillEmptyWithDefaults(tableValues, requestedGroups);
+        fillEmptyWithDefaults(probabilityOfOccurenceInFraud, requestedGroups);
+        fillEmptyWithDefaults(probabilityOfOccurenceInNonFraud, requestedGroups);
 
-        return new BayesTable(tableValues);
+        return new BayesTable(probabilityOfOccurenceInFraud, probabilityOfOccurenceInNonFraud);
     }
 
     private void fillEmptyWithDefaults(Map<String, Map<String, Float>> tableValues, List<String> requestedGroups) {

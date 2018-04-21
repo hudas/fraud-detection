@@ -311,7 +311,7 @@ public class GeneralPeriodicTransactionsStorage {
 
                 long end = System.currentTimeMillis();
 
-                System.out.println("GeneralPeriodicTransactionsStorage.fetchValuesBeforeIncrements took: " + (end - start));
+//                System.out.println("GeneralPeriodicTransactionsStorage.fetchValuesBeforeIncrements took: " + (end - start));
                 future.complete(oldValues);
             });
 
