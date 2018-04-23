@@ -5,6 +5,7 @@ import com.mongodb.async.client.MongoClients;
 import com.mongodb.async.client.MongoCollection;
 import com.mongodb.client.model.InsertManyOptions;
 import org.bson.Document;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.resultsanalyser.api.ResultLoggingRequest;
 
 import java.util.ArrayList;
@@ -23,8 +24,8 @@ public class RequestLogsStorage {
 
     private AtomicBoolean flushing = new AtomicBoolean(false);
 
-    public RequestLogsStorage(String dbUrl, String database, String collectionName) {
-        client = MongoClients.create(dbUrl);
+    public RequestLogsStorage(String database, String collectionName) {
+        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
 
         evaluations = client.getDatabase(database).getCollection(collectionName);
     }

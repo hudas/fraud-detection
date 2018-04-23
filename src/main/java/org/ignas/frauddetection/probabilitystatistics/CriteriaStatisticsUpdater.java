@@ -6,6 +6,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.probabilitystatistics.domain.CombinationStatistics;
 import org.ignas.frauddetection.probabilitystatistics.domain.GeneralOccurrences;
@@ -40,11 +41,9 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
 
     @Override
     public void start(Future<Void> startFuture) {
-        storage = new GroupStatisticsStorage(
-            "mongodb://localhost", "bayes", "groupStatistics");
+        storage = new GroupStatisticsStorage("bayes", "groupStatistics");
 
-        generalProbabilities = new GeneralProbabilitiesStorage(
-            "mongodb://localhost", "bayes", "generalProbabilities");
+        generalProbabilities = new GeneralProbabilitiesStorage("bayes", "generalProbabilities");
 
         storage.initTotalsIfNotPresent()
             .setHandler(result -> {

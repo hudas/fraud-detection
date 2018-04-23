@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.probabilitystatistics.domain.PersonalStats;
 import org.ignas.frauddetection.probabilitystatistics.service.repositories.GeneralProbabilitiesStorage;
@@ -19,10 +20,7 @@ public class PersonalStatisticsUpdater extends AbstractVerticle {
     private PersonalStatisticsStorage personalStatistics;
 
     public PersonalStatisticsUpdater() {
-        personalStatistics = new PersonalStatisticsStorage(
-            "mongodb://localhost",
-            "transactions"
-        );
+        personalStatistics = new PersonalStatisticsStorage("transactions");
     }
 
     @Override

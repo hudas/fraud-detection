@@ -8,6 +8,7 @@ import com.mongodb.client.model.*;
 import io.vertx.core.Future;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.CombinationStatistics;
 import org.ignas.frauddetection.probabilitystatistics.domain.GroupTotalStats;
 
@@ -36,8 +37,8 @@ public class GroupStatisticsStorage {
     private MongoClient client;
     private MongoCollection<Document> groupStatistics;
 
-    public GroupStatisticsStorage(String url, String database, String collection) {
-        client = MongoClients.create(url);
+    public GroupStatisticsStorage(String database, String collection) {
+        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
 
         groupStatistics = client.getDatabase(database)
             .getCollection(collection);

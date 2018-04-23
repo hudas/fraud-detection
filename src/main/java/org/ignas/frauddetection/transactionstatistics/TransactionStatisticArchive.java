@@ -5,6 +5,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.PersonalStats;
 import org.ignas.frauddetection.probabilitystatistics.service.repositories.PersonalStatisticsStorage;
 import org.ignas.frauddetection.shared.ImmutableObjectCodec;
@@ -36,19 +37,10 @@ public class TransactionStatisticArchive extends AbstractVerticle {
     private ConditionStorage conditionStorage;
 
     public TransactionStatisticArchive() {
-        this.conditionStorage = new ConditionStorage("mongodb://localhost", "transactions");
-        generalTransactionsStorage = new GeneralTransactionsStorage(
-            "mongodb://localhost",
-            "transactions"
-        );
-        generalPeriodicTransactionsStorage = new GeneralPeriodicTransactionsStorage(
-            "mongodb://localhost",
-            "transactions"
-        );
-        personalStatistics = new PersonalStatisticsStorage(
-            "mongodb://localhost",
-            "transactions"
-        );
+        this.conditionStorage = new ConditionStorage("transactions");
+        generalTransactionsStorage = new GeneralTransactionsStorage("transactions");
+        generalPeriodicTransactionsStorage = new GeneralPeriodicTransactionsStorage("transactions");
+        personalStatistics = new PersonalStatisticsStorage("transactions");
     }
 
     @Override

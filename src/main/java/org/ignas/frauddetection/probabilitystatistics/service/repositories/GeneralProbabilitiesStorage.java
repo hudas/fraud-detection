@@ -6,6 +6,7 @@ import com.mongodb.async.client.MongoCollection;
 import com.mongodb.client.model.UpdateOptions;
 import io.vertx.core.Future;
 import org.bson.Document;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.GeneralOccurrences;
 
 public class GeneralProbabilitiesStorage {
@@ -14,8 +15,8 @@ public class GeneralProbabilitiesStorage {
 
     private MongoCollection<Document> generalProbabilities;
 
-    public GeneralProbabilitiesStorage(String url, String database, String collection) {
-        client = MongoClients.create(url);
+    public GeneralProbabilitiesStorage(String database, String collection) {
+        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
 
         generalProbabilities = client.getDatabase(database)
             .getCollection(collection);

@@ -2,16 +2,19 @@ package org.ignas.frauddetection.processinglog;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
+import org.ignas.frauddetection.DetectionLauncher;
+import org.ignas.frauddetection.probabilitystatistics.service.RequestsBatcher;
 import org.ignas.frauddetection.processinglog.service.ResultStorage;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
 
 public class EvaluationArchive extends AbstractVerticle {
 
+    private static int BATCH_SIZE = 5000;
+
     private ResultStorage resultStorage;
 
     public EvaluationArchive() {
         this.resultStorage = new ResultStorage(
-            "mongodb://localhost",
             "evaluation",
             "evaluatedTransactions"
         );
@@ -19,6 +22,8 @@ public class EvaluationArchive extends AbstractVerticle {
 
     @Override
     public void start() {
+        RequestsBatcher batcher = new RequestsBatcher(BATCH_SIZE);
+
         EventBus bus = vertx.eventBus();
 
         bus.consumer("learning.processing-request")
@@ -33,8 +38,9 @@ public class EvaluationArchive extends AbstractVerticle {
                 if (request.isFraudulent()) {
                     return;
                 }
+                batcher.add((LearningRequest) message.body())
+                    .ifPresent(batch -> resultStorage.storeLogs(batch.getItems()));
 
-                resultStorage.storeLog(request);
             });
 
         bus.consumer("evaluation-archive.marked-fraudulent")

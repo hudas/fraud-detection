@@ -9,6 +9,7 @@ import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import io.vertx.core.Future;
 import org.bson.Document;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.PersonalPeriodStats;
 import org.ignas.frauddetection.probabilitystatistics.domain.PersonalPeriodTransaction;
 import org.ignas.frauddetection.probabilitystatistics.domain.PersonalStats;
@@ -46,8 +47,8 @@ public class PersonalStatisticsStorage {
 
     private MongoCollection<Document> personalStatistics;
 
-    public PersonalStatisticsStorage(String url, String database) {
-        client = MongoClients.create(url);
+    public PersonalStatisticsStorage(String database) {
+        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
 
         personalStatistics = client.getDatabase(database)
             .getCollection("personalStatistics");

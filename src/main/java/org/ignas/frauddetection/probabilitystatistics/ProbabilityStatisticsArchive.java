@@ -2,6 +2,7 @@ package org.ignas.frauddetection.probabilitystatistics;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.api.response.BayesTable;
 import org.ignas.frauddetection.probabilitystatistics.api.response.ProbabilityStatistics;
 import org.ignas.frauddetection.probabilitystatistics.service.CriteriaProbabilitiesHandler;
@@ -20,17 +21,13 @@ public class ProbabilityStatisticsArchive extends AbstractVerticle {
     private CriteriaStorage groupStorage;
 
     public ProbabilityStatisticsArchive() {
-        groupStatisticsStorage = new GroupStatisticsStorage(
-            "mongodb://localhost", "bayes", "groupStatistics");
+        groupStatisticsStorage = new GroupStatisticsStorage("bayes", "groupStatistics");
 
-        generalProbabilitiesStorage = new GeneralProbabilitiesStorage(
-            "mongodb://localhost", "bayes", "generalProbabilities");
+        generalProbabilitiesStorage = new GeneralProbabilitiesStorage("bayes", "generalProbabilities");
 
-        criteriaStorage = new CriteriaStorage(
-            "mongodb://localhost", "bayes", "criteriaProbabilities");
+        criteriaStorage = new CriteriaStorage("bayes", "criteriaProbabilities");
 
-        groupStorage = new CriteriaStorage(
-            "mongodb://localhost", "bayes", "criteriaGroupProbabilities");
+        groupStorage = new CriteriaStorage("bayes", "criteriaGroupProbabilities");
     }
 
     @Override

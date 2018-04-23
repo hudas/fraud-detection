@@ -29,8 +29,7 @@ public class CriteriaProbabilityLoader implements ServiceIntegration<CriteriaCon
 
         long start = System.currentTimeMillis();
 
-        DeliveryOptions options = new DeliveryOptions().setSendTimeout(300000);
-        bus.send(ARCHIVE_ADDRESS, new CriteriaProbabilityRequest(request), options, criteriaResponse -> {
+        bus.send(ARCHIVE_ADDRESS, new CriteriaProbabilityRequest(request), criteriaResponse -> {
 
             if (criteriaResponse.failed()) {
                 criteriaResponse.cause().printStackTrace();

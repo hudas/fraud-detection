@@ -3,6 +3,7 @@ package org.ignas.frauddetection.probabilitystatistics;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.probabilitystatistics.service.repositories.GeneralProbabilitiesStorage;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
@@ -13,7 +14,6 @@ public class GeneralDataUpdater extends AbstractVerticle {
 
     public GeneralDataUpdater() {
         probabilitiesStorage = new GeneralProbabilitiesStorage(
-            "mongodb://localhost",
             "bayes",
             "generalProbabilities"
         );

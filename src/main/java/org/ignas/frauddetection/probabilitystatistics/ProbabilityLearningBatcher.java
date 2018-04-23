@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class ProbabilityLearningBatcher extends AbstractVerticle {
 
-    public static final int BATCH_SIZE = 1;
+    public static final int BATCH_SIZE = 5000;
 
     @Override
     public void start() {

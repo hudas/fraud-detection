@@ -3,6 +3,7 @@ package org.ignas.frauddetection.resultsanalyser;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.resultsanalyser.api.ResultLoggingRequest;
 import org.ignas.frauddetection.shared.ImmutableObjectCodec;
 
@@ -36,7 +37,6 @@ public class ResultsAnalyser extends AbstractVerticle {
 
     private void setupStorage() {
         storage = new RequestLogsStorage(
-            "mongodb://localhost",
             "logging",
             "evaluations"
         );

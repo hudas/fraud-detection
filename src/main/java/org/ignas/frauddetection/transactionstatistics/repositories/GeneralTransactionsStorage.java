@@ -6,8 +6,13 @@ import com.mongodb.async.client.MongoCollection;
 import com.mongodb.client.model.UpdateOptions;
 import io.vertx.core.Future;
 import org.bson.Document;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.GeneralOccurrences;
 import org.ignas.frauddetection.transactionstatistics.domain.NonPeriodicGeneralStats;
+import org.joda.time.LocalDateTime;
+import org.joda.time.Seconds;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 public class GeneralTransactionsStorage {
 
@@ -19,12 +24,15 @@ public class GeneralTransactionsStorage {
     private static final String SQUARED_TIME_DIFFERENCE = "sumOfSquaredTimeDiffFromLast";
     private static final String TIME_DIFFERENCE = "sumOfTimeDiffFromLast";
 
+    private NonPeriodicGeneralStats CACHE = null;
+    private LocalDateTime CACHED_AT = null;
+
     private MongoClient client;
 
     private MongoCollection<Document> nonPeriodicGeneralStatistics;
 
-    public GeneralTransactionsStorage(String url, String database) {
-        client = MongoClients.create(url);
+    public GeneralTransactionsStorage(String database) {
+        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
 
         nonPeriodicGeneralStatistics = client.getDatabase(database)
             .getCollection("nonPeriodicGeneralStatistics");
@@ -64,7 +72,9 @@ public class GeneralTransactionsStorage {
     }
 
     public Future<NonPeriodicGeneralStats> fetchNonPeriodicStats() {
-        long start = System.currentTimeMillis();
+        if (CACHE != null && CACHED_AT != null && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 >= DetectionLauncher.CACHE_TTL) {
+            return Future.succeededFuture(CACHE);
+        }
 
         Future<NonPeriodicGeneralStats> loader = Future.future();
 
@@ -90,8 +100,9 @@ public class GeneralTransactionsStorage {
                 result.getDouble(SQUARED_DISTANCE_COMMON).floatValue()
             );
 
-            long end = System.currentTimeMillis();
-//            System.out.println("GeneralProbabilitiesStorage.fetch" + (end - start));
+            CACHE = stats;
+            CACHED_AT = LocalDateTime.now();
+            System.out.println("GeneralProbabilitiesStorage.Updating cache");
             loader.complete(stats);
         });
 

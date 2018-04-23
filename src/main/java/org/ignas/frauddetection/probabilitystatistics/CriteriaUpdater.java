@@ -4,6 +4,7 @@ package org.ignas.frauddetection.probabilitystatistics;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.probabilitystatistics.service.BatchedCriteriaProcessor;
 import org.ignas.frauddetection.probabilitystatistics.service.repositories.CriteriaStorage;
@@ -15,7 +16,7 @@ public class CriteriaUpdater extends AbstractVerticle {
 
     @Override
     public void start(Future<Void> startFuture) {
-        storage = new CriteriaStorage("mongodb://localhost", "bayes", "criteriaProbabilities");
+        storage = new CriteriaStorage("bayes", "criteriaProbabilities");
 
         EventBus bus = vertx.eventBus();
 

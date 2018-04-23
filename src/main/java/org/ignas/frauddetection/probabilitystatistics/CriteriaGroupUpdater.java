@@ -1,8 +1,10 @@
 package org.ignas.frauddetection.probabilitystatistics;
 
+import com.mongodb.async.client.MongoClientSettings;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.probabilitystatistics.service.repositories.CriteriaStorage;
 
@@ -13,7 +15,8 @@ public class CriteriaGroupUpdater extends AbstractVerticle {
     private CriteriaStorage groupStorage;
 
     public CriteriaGroupUpdater() {
-        this.groupStorage = new CriteriaStorage("mongodb://localhost", "bayes", "criteriaGroupProbabilities");
+
+        this.groupStorage = new CriteriaStorage("bayes", "criteriaGroupProbabilities");
     }
 
     @Override

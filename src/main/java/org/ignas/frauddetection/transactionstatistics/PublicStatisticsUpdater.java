@@ -3,6 +3,7 @@ package org.ignas.frauddetection.transactionstatistics;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.transactionevaluation.api.request.BehaviourData;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
@@ -13,10 +14,7 @@ public class PublicStatisticsUpdater extends AbstractVerticle {
     private GeneralTransactionsStorage nonPeriodicTransactionsStorage;
 
     public PublicStatisticsUpdater() {
-        nonPeriodicTransactionsStorage = new GeneralTransactionsStorage(
-            "mongodb://localhost",
-            "transactions"
-        );
+        nonPeriodicTransactionsStorage = new GeneralTransactionsStorage("transactions");
     }
 
     @Override

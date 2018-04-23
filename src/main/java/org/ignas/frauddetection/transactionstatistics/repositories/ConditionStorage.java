@@ -8,8 +8,11 @@ import com.mongodb.client.model.*;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import org.bson.Document;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionstatistics.domain.*;
+import org.joda.time.LocalDateTime;
+import org.joda.time.Seconds;
 
 import javax.print.Doc;
 import java.util.ArrayList;
@@ -44,12 +47,15 @@ public class ConditionStorage {
 
     private MongoCollection<Document> conditionTotals;
 
+    private ConditionTotals CACHE;
+    private LocalDateTime CACHED_AT;
+
     public void stop() {
         client.close();
     }
 
-    public ConditionStorage(String url, String database) {
-        client = MongoClients.create(url);
+    public ConditionStorage(String database) {
+        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
 
         creditorsConditions = client.getDatabase(database)
             .getCollection("creditorsConditions");
@@ -113,6 +119,42 @@ public class ConditionStorage {
                 locationLoader.complete(buildOccurrencesFromDocument(result));
             });
 
+        Future<ConditionTotals> totalsLoader = fetchConditionTotals();
+
+
+        Future<ExternalConditions> future = Future.future();
+
+        CompositeFuture.all(creditorLoader, timeLoader, locationLoader, totalsLoader)
+            .setHandler(allLoaded -> {
+                if (allLoaded.failed()) {
+                    allLoaded.cause().printStackTrace();
+                    future.fail(allLoaded.cause());
+                    return;
+                }
+
+                ConditionOccurrences<String> creditorOccurrences = allLoaded.result().resultAt(0);
+                ConditionOccurrences<Integer> timeOccurrences = allLoaded.result().resultAt(1);
+                ConditionOccurrences<String> locationOccurrences = allLoaded.result().resultAt(2);
+
+                ConditionTotals totalStats = allLoaded.result().resultAt(3);
+
+                ConditionStats creditorStats = buildStats(creditorOccurrences, totalStats.getCreditorTotal());
+                ConditionStats timeStats = buildStats(timeOccurrences, totalStats.getTimeTotal());
+                ConditionStats locationStats = buildStats(locationOccurrences, totalStats.getLocationTotal());
+
+                long end = System.currentTimeMillis();
+//                System.out.println("ConditionStorage.fetchOccurrences took: " + (end - start));
+                future.complete(new ExternalConditions(creditorStats, timeStats, locationStats));
+            });
+
+        return future;
+    }
+
+    private Future<ConditionTotals> fetchConditionTotals() {
+        if (CACHE != null && CACHED_AT != null && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 >= DetectionLauncher.CACHE_TTL) {
+            return Future.succeededFuture(CACHE);
+        }
+
         Future<ConditionTotals> totalsLoader = Future.future();
         ConditionTotals totals = new ConditionTotals();
 
@@ -150,36 +192,11 @@ public class ConditionStorage {
                     return;
                 }
 
+                CACHE = totals;
+                CACHED_AT = LocalDateTime.now();
                 totalsLoader.complete(totals);
             });
-
-
-        Future<ExternalConditions> future = Future.future();
-
-        CompositeFuture.all(creditorLoader, timeLoader, locationLoader, totalsLoader)
-            .setHandler(allLoaded -> {
-                if (allLoaded.failed()) {
-                    allLoaded.cause().printStackTrace();
-                    future.fail(allLoaded.cause());
-                    return;
-                }
-
-                ConditionOccurrences<String> creditorOccurrences = allLoaded.result().resultAt(0);
-                ConditionOccurrences<Integer> timeOccurrences = allLoaded.result().resultAt(1);
-                ConditionOccurrences<String> locationOccurrences = allLoaded.result().resultAt(2);
-
-                ConditionTotals totalStats = allLoaded.result().resultAt(3);
-
-                ConditionStats creditorStats = buildStats(creditorOccurrences, totalStats.getCreditorTotal());
-                ConditionStats timeStats = buildStats(timeOccurrences, totalStats.getTimeTotal());
-                ConditionStats locationStats = buildStats(locationOccurrences, totalStats.getLocationTotal());
-
-                long end = System.currentTimeMillis();
-//                System.out.println("ConditionStorage.fetchOccurrences took: " + (end - start));
-                future.complete(new ExternalConditions(creditorStats, timeStats, locationStats));
-            });
-
-        return future;
+        return totalsLoader;
     }
 
     /**

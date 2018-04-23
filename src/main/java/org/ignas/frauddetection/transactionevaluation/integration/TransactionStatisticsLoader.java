@@ -27,8 +27,7 @@ public class TransactionStatisticsLoader implements ServiceIntegration<Transacti
     public Future<HistoricalData> load(Transaction request) {
         Future<HistoricalData> loader = Future.future();
 
-        DeliveryOptions options = new DeliveryOptions().setSendTimeout(300000);
-        bus.send("transaction-statistic.archive", mapRequest(request), options, statisticsResponse -> {
+        bus.send("transaction-statistic.archive", mapRequest(request), statisticsResponse -> {
 
             if (statisticsResponse.failed()) {
                 System.out.println("ProbabilityCalculatorIntegration" + statisticsResponse.cause().getMessage());

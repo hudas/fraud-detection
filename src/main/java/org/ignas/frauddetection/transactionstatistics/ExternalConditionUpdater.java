@@ -3,6 +3,7 @@ package org.ignas.frauddetection.transactionstatistics;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionstatistics.domain.ConditionOccurrences;
@@ -19,10 +20,7 @@ public class ExternalConditionUpdater extends AbstractVerticle {
     private ConditionStorage conditionStorage;
 
     public ExternalConditionUpdater() {
-        conditionStorage = new ConditionStorage(
-            "mongodb://localhost",
-            "transactions"
-        );
+        conditionStorage = new ConditionStorage("transactions");
     }
 
     @Override

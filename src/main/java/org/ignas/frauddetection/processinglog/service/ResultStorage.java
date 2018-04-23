@@ -4,8 +4,11 @@ import com.google.common.collect.Iterables;
 import com.mongodb.async.client.MongoClient;
 import com.mongodb.async.client.MongoClients;
 import com.mongodb.async.client.MongoCollection;
+import com.mongodb.client.model.BulkWriteOptions;
+import com.mongodb.client.model.InsertOneModel;
 import io.vertx.core.Future;
 import org.bson.Document;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.CombinationStatistics;
 import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionevaluation.api.request.BehaviourData;
@@ -43,8 +46,8 @@ public class ResultStorage {
     private MongoClient client;
     private MongoCollection<Document> resultCollection;
 
-    public ResultStorage(String url, String database, String collection) {
-        client = MongoClients.create(url);
+    public ResultStorage(String database, String collection) {
+        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
 
         resultCollection = client.getDatabase(database)
             .getCollection(collection);
@@ -77,15 +80,22 @@ public class ResultStorage {
         client.close();
     }
 
-    public Future<Void> storeLog(LearningRequest request) {
-        Document document = new Document("id", request.getTransaction().getTransactionId())
-                .append(TRANSACTION_DATA_OBJECT, buildTransactionDocument(request))
-                .append(CRITERIA_OBJECT, buildCriteriaDocuments(request))
-                .append(BEHAVIOUR_OBJECT, buildBehaviourDocument(request));
+    public Future<Void> storeLogs(List<LearningRequest> requests) {
+        List<InsertOneModel<Document>> inserts = new ArrayList<>();
+        for (LearningRequest request: requests) {
+            inserts.add(
+                new InsertOneModel<Document>(
+                    new Document("id", request.getTransaction().getTransactionId())
+                        .append(TRANSACTION_DATA_OBJECT, buildTransactionDocument(request))
+                        .append(CRITERIA_OBJECT, buildCriteriaDocuments(request))
+                        .append(BEHAVIOUR_OBJECT, buildBehaviourDocument(request))
+                )
+            );
+        }
 
         Future<Void> loader = Future.future();
 
-        resultCollection.insertOne(document, ((result, t) -> {
+        resultCollection.bulkWrite(inserts, new BulkWriteOptions().ordered(false), (result, t) -> {
             if (t != null) {
                 t.printStackTrace();
                 loader.fail(t);
@@ -93,7 +103,7 @@ public class ResultStorage {
             }
 
             loader.complete();
-        }));
+        });
 
         return loader;
     }

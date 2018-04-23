@@ -8,8 +8,10 @@ import com.mongodb.client.model.*;
 import io.vertx.core.Future;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.transactionstatistics.domain.*;
 import org.joda.time.LocalDateTime;
+import org.joda.time.Seconds;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,8 +63,12 @@ public class GeneralPeriodicTransactionsStorage {
 
     private final MongoCollection<Document> periodTotals;
 
-    public GeneralPeriodicTransactionsStorage(String url, String database) {
-        client = MongoClients.create(url);
+    private PeriodicGeneralStats CACHE = null;
+    private LocalDateTime CACHED_AT = null;
+
+
+    public GeneralPeriodicTransactionsStorage(String database) {
+        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
 
         dailyArchive = client.getDatabase(database).getCollection("dailyArchive");
         weeklyArchive = client.getDatabase(database).getCollection("weeklyArchive");
@@ -137,7 +143,9 @@ public class GeneralPeriodicTransactionsStorage {
     }
 
     public Future<PeriodicGeneralStats> fetchPeriodicStats() {
-        long start = System.currentTimeMillis();
+        if (CACHE != null && CACHED_AT != null && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 >= DetectionLauncher.CACHE_TTL) {
+            return Future.succeededFuture(CACHE);
+        }
 
         Future<PeriodicGeneralStats> future = Future.future();
 
@@ -165,8 +173,8 @@ public class GeneralPeriodicTransactionsStorage {
                         return;
                     }
 
-                    long end = System.currentTimeMillis();
-//                    System.out.println("GeneralPeriodicTransactionsStorage.fetchValuesBeforeIncrements took: " + (end - start));
+                    CACHE = generalStats;
+                    CACHED_AT = LocalDateTime.now();
                     future.complete(generalStats);
             });
 

@@ -1,1 +1,1 @@
-{"transactionId":"344","debtorCreditCardId":"100","debtorAccountId":"100","creditorAccountId":"103","amount":500.0,"time":"2018-04-15T03:00:00.0+00:00","location":{"latitude":"50.250000","longtitude":"25.540000"}}
+{"transactionId":"344","debtorCreditCardId":"123","debtorAccountId":"123","creditorAccountId":"123","amount":123.75,"time":"2018-02-24T14:51:36.1+00:00", "location": { "latitude" : "54.310000", "longtitude" : "25.310000" }}

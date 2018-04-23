@@ -1,18 +1,27 @@
 package org.ignas.frauddetection;
 
 import com.google.common.collect.ImmutableList;
+import com.mongodb.ServerAddress;
+import com.mongodb.async.client.MongoClientSettings;
+import com.mongodb.connection.ClusterSettings;
+import com.mongodb.connection.ConnectionPoolSettings;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.impl.launcher.VertxLifecycleHooks;
 import io.vertx.core.json.JsonObject;
+import jdk.internal.jline.internal.Log;
 import org.ignas.frauddetection.httpapi.EvaluationRequestController;
 import org.ignas.frauddetection.probabilitystatistics.*;
 import org.ignas.frauddetection.processinglog.EvaluationArchive;
 import org.ignas.frauddetection.resultsanalyser.ResultsAnalyser;
 import org.ignas.frauddetection.transactionevaluation.TransactionMappingResolver;
 import org.ignas.frauddetection.transactionstatistics.*;
+import org.slf4j.event.Level;
+
+import java.util.Arrays;
+import java.util.logging.Logger;
 
 /**
  * Custom fraud detection cluster launcher
@@ -21,6 +30,23 @@ import org.ignas.frauddetection.transactionstatistics.*;
  *
  */
 public class DetectionLauncher implements VertxLifecycleHooks {
+
+    public static final MongoClientSettings MONGODB_SETTINGS = MongoClientSettings.builder()
+        .clusterSettings(ClusterSettings.builder()
+                .hosts(Arrays.asList(new ServerAddress(DetectionLauncher.MONGODB_HOST)))
+        .build())
+        .connectionPoolSettings(ConnectionPoolSettings.builder()
+                .minSize(500)
+                .maxSize(2000)
+                .maxWaitQueueSize(10000)
+                .build())
+        .build();
+
+
+    public static final String MONGODB_HOST = "10.135.80.119:27017";
+//    public static final String MONGODB_HOST = "localhost";
+
+    public static final long CACHE_TTL = 10000;
 
     public static void main(String... args) {
         Vertx vertx = Vertx.vertx();

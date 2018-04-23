@@ -61,13 +61,17 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
 
         Transaction transactionData = mapToDomain(requestData);
 
+        long loadStart = System.currentTimeMillis();
         transactionStatisticsIntegration.load(transactionData)
             .setHandler(historyLoaded -> {
+                long loadEnd = System.currentTimeMillis();
+
                 if (historyLoaded.failed()) {
                     System.out.println("Failed to load transaction history: " + historyLoaded.cause().getMessage());
                     historyLoaded.cause().printStackTrace();
                     throw new IllegalStateException(historyLoaded.cause());
                 }
+                System.out.println("FraudEvaluationHandler: Transactions stats: Took:" + (loadEnd - loadStart));
 
                 Map<String, EvaluationResult> evaluationResult =
                     criteriaEvaluator.evaluateAll(transactionData, historyLoaded.result());
@@ -83,13 +87,17 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
                 EvaluationResult distanceFromLast = evaluationResult.get("AVERAGE_DISTANCE_FROM_LAST_LOCATION");
                 EvaluationResult timeToLast = evaluationResult.get("MIN_TIME_BETWEEN_TRANSACTIONS");
 
+                long probabilityLoadStart = System.currentTimeMillis();
+
                 Future<ProbabilityStatistics> probabilityStatistics = criteriaProbabilityIntegration.load(new CriteriaContainer(requestData.getTransactionId(), criteriaValues));
 
                 probabilityStatistics.setHandler(probabilitiesLoaded -> {
+                    long probabilityLoadEnd = System.currentTimeMillis();
                     if (probabilitiesLoaded.failed()) {
                         System.out.println("Failed to load probabilities: " + probabilitiesLoaded.cause().getMessage());
                         throw new IllegalStateException(probabilitiesLoaded.cause());
                     }
+                    System.out.println("FraudEvaluationHandler: Probability stats: Took:" + (probabilityLoadEnd - probabilityLoadStart));
 
                     ProbabilityStatistics statistics = probabilitiesLoaded.result();
 

@@ -45,7 +45,7 @@ public class EvaluationRequestHandler implements Handler<RoutingContext> {
                     resultLogger.publish(mapToRequest(request, probability));
 
                     String responseRepresentation =
-                        String.format("{ \"fraud-probability\" : \"%f\" }", probability);
+                        String.format("{ \"fraud-probability\" : %f }", probability);
 
 
                     req.response()

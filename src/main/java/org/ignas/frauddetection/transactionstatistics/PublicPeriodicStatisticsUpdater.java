@@ -4,6 +4,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.BatchToProcess;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
 import org.ignas.frauddetection.transactionevaluation.api.request.TransactionData;
@@ -18,10 +19,7 @@ public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
     private GeneralPeriodicTransactionsStorage periodicStorage;
 
     public PublicPeriodicStatisticsUpdater() {
-        periodicStorage = new GeneralPeriodicTransactionsStorage(
-            "mongodb://localhost",
-            "transactions"
-        );
+        periodicStorage = new GeneralPeriodicTransactionsStorage("transactions");
     }
 
     @Override

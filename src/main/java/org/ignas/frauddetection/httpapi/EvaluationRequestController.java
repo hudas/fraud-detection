@@ -19,7 +19,7 @@ import org.ignas.frauddetection.shared.OneWayServiceIntegration;
 
 public class EvaluationRequestController extends AbstractVerticle {
 
-    public static final int DEFAULT_TIMEOUT = 300000;
+    public static final int DEFAULT_TIMEOUT = 3000;
     public static final int SERVER_PORT = 8081;
 
     @Override

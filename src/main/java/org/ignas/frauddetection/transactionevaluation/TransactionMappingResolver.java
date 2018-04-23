@@ -3,6 +3,7 @@ package org.ignas.frauddetection.transactionevaluation;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.EventBus;
+import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.api.request.CriteriaGroupProbabilityRequest;
 import org.ignas.frauddetection.probabilitystatistics.api.request.CriteriaProbabilityRequest;
 import org.ignas.frauddetection.shared.ImmutableObjectCodec;
@@ -17,7 +18,6 @@ import org.ignas.frauddetection.transactionevaluation.integration.TransactionSta
 
 public class TransactionMappingResolver extends AbstractVerticle {
 
-    public static final int CACHE_TTL = 100;
 
     @Override
     public void start(Future<Void> setupFuture) {
@@ -31,7 +31,7 @@ public class TransactionMappingResolver extends AbstractVerticle {
             .setHandler(cachePrepared -> {
                 System.out.println("Cache loaded, will init vertice");
 
-                vertx.setPeriodic(CACHE_TTL, (timer) -> cache.reload());
+                vertx.setPeriodic(DetectionLauncher.CACHE_TTL, (timer) -> cache.reload());
 
                 bus.consumer("transaction-mapping.resolver")
                     .handler(
