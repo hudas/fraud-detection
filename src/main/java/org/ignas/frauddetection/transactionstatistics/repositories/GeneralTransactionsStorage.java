@@ -7,12 +7,9 @@ import com.mongodb.client.model.UpdateOptions;
 import io.vertx.core.Future;
 import org.bson.Document;
 import org.ignas.frauddetection.DetectionLauncher;
-import org.ignas.frauddetection.probabilitystatistics.domain.GeneralOccurrences;
 import org.ignas.frauddetection.transactionstatistics.domain.NonPeriodicGeneralStats;
 import org.joda.time.LocalDateTime;
 import org.joda.time.Seconds;
-
-import java.util.concurrent.atomic.AtomicReference;
 
 public class GeneralTransactionsStorage {
 
@@ -32,7 +29,7 @@ public class GeneralTransactionsStorage {
     private MongoCollection<Document> nonPeriodicGeneralStatistics;
 
     public GeneralTransactionsStorage(String database) {
-        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
+        client = MongoClients.create(DetectionLauncher.TRANSACTIONS_MONGODB_SETTINGS);
 
         nonPeriodicGeneralStatistics = client.getDatabase(database)
             .getCollection("nonPeriodicGeneralStatistics");
@@ -72,7 +69,9 @@ public class GeneralTransactionsStorage {
     }
 
     public Future<NonPeriodicGeneralStats> fetchNonPeriodicStats() {
-        if (CACHE != null && CACHED_AT != null && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 >= DetectionLauncher.CACHE_TTL) {
+        if (CACHE != null && CACHED_AT != null
+            && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 <= DetectionLauncher.CACHE_TTL) {
+            System.out.println("GeneralTransactionsStorage.fetchNonPeriodicStats Returns from cache.");
             return Future.succeededFuture(CACHE);
         }
 
@@ -102,7 +101,7 @@ public class GeneralTransactionsStorage {
 
             CACHE = stats;
             CACHED_AT = LocalDateTime.now();
-            System.out.println("GeneralProbabilitiesStorage.Updating cache");
+            System.out.println("GeneralTransactionsStorage.fetchNonPeriodicStats Updating cache.");
             loader.complete(stats);
         });
 

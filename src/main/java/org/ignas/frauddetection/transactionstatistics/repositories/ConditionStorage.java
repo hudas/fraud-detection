@@ -14,7 +14,6 @@ import org.ignas.frauddetection.transactionstatistics.domain.*;
 import org.joda.time.LocalDateTime;
 import org.joda.time.Seconds;
 
-import javax.print.Doc;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -55,7 +54,7 @@ public class ConditionStorage {
     }
 
     public ConditionStorage(String database) {
-        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
+        client = MongoClients.create(DetectionLauncher.TRANSACTIONS_MONGODB_SETTINGS);
 
         creditorsConditions = client.getDatabase(database)
             .getCollection("creditorsConditions");
@@ -151,7 +150,9 @@ public class ConditionStorage {
     }
 
     private Future<ConditionTotals> fetchConditionTotals() {
-        if (CACHE != null && CACHED_AT != null && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 >= DetectionLauncher.CACHE_TTL) {
+        if (CACHE != null && CACHED_AT != null
+            && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 <= DetectionLauncher.CACHE_TTL) {
+            System.out.println("ConditionStorage.fetchConditionTotals Returning from cache.");
             return Future.succeededFuture(CACHE);
         }
 
@@ -194,6 +195,7 @@ public class ConditionStorage {
 
                 CACHE = totals;
                 CACHED_AT = LocalDateTime.now();
+                System.out.println("ConditionStorage.fetchConditionTotals Updateing cache.");
                 totalsLoader.complete(totals);
             });
         return totalsLoader;

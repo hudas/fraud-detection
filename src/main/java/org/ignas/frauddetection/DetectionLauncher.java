@@ -31,9 +31,9 @@ import java.util.logging.Logger;
  */
 public class DetectionLauncher implements VertxLifecycleHooks {
 
-    public static final MongoClientSettings MONGODB_SETTINGS = MongoClientSettings.builder()
+    public static final MongoClientSettings TRANSACTIONS_MONGODB_SETTINGS = MongoClientSettings.builder()
         .clusterSettings(ClusterSettings.builder()
-                .hosts(Arrays.asList(new ServerAddress(DetectionLauncher.MONGODB_HOST)))
+                .hosts(Arrays.asList(new ServerAddress(DetectionLauncher.TRANSACTIONS_MONGODB_HOST)))
         .build())
         .connectionPoolSettings(ConnectionPoolSettings.builder()
                 .minSize(500)
@@ -43,8 +43,38 @@ public class DetectionLauncher implements VertxLifecycleHooks {
         .build();
 
 
-    public static final String MONGODB_HOST = "10.135.80.119:27017";
+    public static final String TRANSACTIONS_MONGODB_HOST = "10.135.80.119:27017";
+
+
+    public static final MongoClientSettings PERIODIC_TRANSACTIONS_DB_SETTINGS = MongoClientSettings.builder()
+        .clusterSettings(ClusterSettings.builder()
+            .hosts(Arrays.asList(new ServerAddress(DetectionLauncher.PERIODIC_TRANSACTIONS_DB_HOST)))
+            .build())
+        .connectionPoolSettings(ConnectionPoolSettings.builder()
+            .minSize(500)
+            .maxSize(2000)
+            .maxWaitQueueSize(10000)
+            .build())
+        .build();
+
+
+    public static final String PERIODIC_TRANSACTIONS_DB_HOST = "10.135.12.54:27017";
 //    public static final String MONGODB_HOST = "localhost";
+
+    public static final MongoClientSettings BAYES_MONGODB_SETTINGS = MongoClientSettings.builder()
+        .clusterSettings(ClusterSettings.builder()
+            .hosts(Arrays.asList(new ServerAddress(DetectionLauncher.BAYES_MONGODB_HOST)))
+            .build())
+        .connectionPoolSettings(ConnectionPoolSettings.builder()
+            .minSize(500)
+            .maxSize(2000)
+            .maxWaitQueueSize(10000)
+            .build())
+        .build();
+
+
+    public static final String BAYES_MONGODB_HOST = "10.135.79.66:27017";
+
 
     public static final long CACHE_TTL = 10000;
 

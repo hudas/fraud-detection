@@ -109,7 +109,7 @@ public class CriteriaStatisticsUpdater extends AbstractVerticle {
                                             List<CombinationStatistics> beforeUpdateStatistics = loaded.result();
 
                                             storage.updateOccurences(groupCombinations);
-                                            storage.fetchTotalStats("A").setHandler(groupStatsLoaded -> {
+                                            storage.fetchTotalStats().setHandler(groupStatsLoaded -> {
                                                 if (groupStatsLoaded.failed()) {
                                                     groupStatsLoaded.cause().printStackTrace();
                                                     throw new IllegalStateException(groupStatsLoaded.cause().getMessage());

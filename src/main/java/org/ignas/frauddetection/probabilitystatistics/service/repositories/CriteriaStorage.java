@@ -1,20 +1,13 @@
 package org.ignas.frauddetection.probabilitystatistics.service.repositories;
 
-import com.google.common.collect.Iterables;
-import com.mongodb.ServerAddress;
 import com.mongodb.async.client.MongoClient;
-import com.mongodb.async.client.MongoClientSettings;
 import com.mongodb.async.client.MongoClients;
 import com.mongodb.async.client.MongoCollection;
 import com.mongodb.client.model.*;
-import com.mongodb.connection.ClusterSettings;
-import com.mongodb.connection.ConnectionPoolSettings;
-import com.mongodb.connection.ServerSettings;
 import io.vertx.core.Future;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.ignas.frauddetection.DetectionLauncher;
-import org.ignas.frauddetection.probabilitystatistics.api.response.BayesTable;
 import org.ignas.frauddetection.probabilitystatistics.domain.CriteriaStatistics;
 import org.ignas.frauddetection.probabilitystatistics.domain.CriteriaUpdate;
 import org.joda.time.LocalDateTime;
@@ -43,7 +36,7 @@ public class CriteriaStorage {
     private LocalDateTime CACHED_AT = null;
 
     public CriteriaStorage(String database, String collection) {
-        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
+        client = MongoClients.create(DetectionLauncher.BAYES_MONGODB_SETTINGS);
 
         criteriaProbabilities = client.getDatabase(database)
             .getCollection(collection);
@@ -78,23 +71,26 @@ public class CriteriaStorage {
     }
 
     public Future<List<CriteriaStatistics>> fetchStatistics(Map<String, String> requestedValues) {
-//        if (CACHE != null && CACHED_AT != null && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 >= DetectionLauncher.CACHE_TTL) {
-//
-//            List<CriteriaStatistics> cachedResultValues = new ArrayList<>();
-//
-//            for(Map.Entry<String, String> requested: requestedValues.entrySet()) {
-//                Optional<CriteriaStatistics> cachedValue = CACHE.stream()
-//                    .filter(it -> it.getName().equals(requested.getKey()) && it.getValue().equals(requested.getValue()))
-//                    .findAny();
-//
-//                cachedResultValues.add(cachedValue.get());
-//            }
-//
-//            if (cachedResultValues.size() == requestedValues.size()) {
-//                return Future.succeededFuture(CACHE);
-//            }
-//            // If sizes does not match, this means that some value is missing in cache and whole cache will be reloaded.
-//        }
+        if (CACHE != null && CACHED_AT != null
+            && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 <= DetectionLauncher.CACHE_TTL) {
+
+            List<CriteriaStatistics> cachedResultValues = new ArrayList<>();
+
+            for(Map.Entry<String, String> requested: requestedValues.entrySet()) {
+                Optional<CriteriaStatistics> cachedValue = CACHE.stream()
+                    .filter(it -> it.getName().equals(requested.getKey()) && it.getValue().equals(requested.getValue()))
+                    .findAny();
+
+                cachedResultValues.add(cachedValue.get());
+            }
+
+            if (cachedResultValues.size() == requestedValues.size()) {
+                System.out.println("CriteriaStorage.fetchStatistics Returns from cache.");
+
+                return Future.succeededFuture(CACHE);
+            }
+            // If sizes does not match, this means that some value is missing in cache and whole cache will be reloaded.
+        }
 
         Future<List<CriteriaStatistics>> totalLoader = Future.future();
 
@@ -119,13 +115,6 @@ public class CriteriaStorage {
 
                         String value = valueDoc.getString(NAME_FIELD);
 
-                        boolean requested = requestedValues.entrySet().stream()
-                            .anyMatch(it -> name.equals(it.getKey()) && value.equals(it.getValue()));
-
-                        if (!requested) {
-                            continue;
-                        }
-
                         loadedStatistics.add(new CriteriaStatistics(
                                 name,
                                 value,
@@ -144,7 +133,25 @@ public class CriteriaStorage {
 
                     addUnknownValues(requestedValues, loadedStatistics);
 
-                    totalLoader.complete(loadedStatistics);
+                    // Caching all response.
+                    CACHE = loadedStatistics;
+                    System.out.println("CriteriaStorage.fetchStatistics updates cache.");
+
+
+                    List<CriteriaStatistics> requestedResult = new ArrayList<>();
+                    for (CriteriaStatistics stats: loadedStatistics) {
+
+                        boolean requested = requestedValues.entrySet().stream()
+                            .anyMatch(it -> stats.getName().equals(it.getKey()) && stats.getValue().equals(it.getValue()));
+
+                        if (!requested) {
+                            continue;
+                        }
+
+                        requestedResult.add(stats);
+                    }
+
+                    totalLoader.complete(requestedResult);
                 });
 
         return totalLoader;

@@ -56,6 +56,7 @@ public class GeneralPeriodicTransactionsStorage {
     public static final String VALUE_SQUARED_SUM_FIELD = "valueSquaredSum";
 
     private MongoClient client;
+    private MongoClient learningClient;
 
     private final MongoCollection<Document> dailyArchive;
     private final MongoCollection<Document> weeklyArchive;
@@ -68,16 +69,19 @@ public class GeneralPeriodicTransactionsStorage {
 
 
     public GeneralPeriodicTransactionsStorage(String database) {
-        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
+        learningClient = MongoClients.create(DetectionLauncher.PERIODIC_TRANSACTIONS_DB_SETTINGS);
 
-        dailyArchive = client.getDatabase(database).getCollection("dailyArchive");
-        weeklyArchive = client.getDatabase(database).getCollection("weeklyArchive");
-        monthlyArchive = client.getDatabase(database).getCollection("monthlyArchive");
+        dailyArchive = learningClient.getDatabase(database).getCollection("dailyArchive");
+        weeklyArchive = learningClient.getDatabase(database).getCollection("weeklyArchive");
+        monthlyArchive = learningClient.getDatabase(database).getCollection("monthlyArchive");
+
+        client = MongoClients.create(DetectionLauncher.TRANSACTIONS_MONGODB_SETTINGS);
 
         periodTotals = client.getDatabase(database).getCollection("periodTotals");
     }
 
     public void close() {
+        learningClient.close();
         client.close();
     }
 
@@ -143,7 +147,9 @@ public class GeneralPeriodicTransactionsStorage {
     }
 
     public Future<PeriodicGeneralStats> fetchPeriodicStats() {
-        if (CACHE != null && CACHED_AT != null && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 >= DetectionLauncher.CACHE_TTL) {
+        if (CACHE != null && CACHED_AT != null
+            && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 <= DetectionLauncher.CACHE_TTL) {
+            System.out.println("GeneralPeriodicTransactionsStorage.fetchPeriodicStats Returns from cache.");
             return Future.succeededFuture(CACHE);
         }
 
@@ -175,6 +181,7 @@ public class GeneralPeriodicTransactionsStorage {
 
                     CACHE = generalStats;
                     CACHED_AT = LocalDateTime.now();
+                    System.out.println("GeneralPeriodicTransactionsStorage.fetchPeriodicStats Updates cache.");
                     future.complete(generalStats);
             });
 

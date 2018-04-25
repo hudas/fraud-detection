@@ -7,7 +7,6 @@ import com.mongodb.async.client.MongoCollection;
 import com.mongodb.client.model.*;
 import io.vertx.core.Future;
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.ignas.frauddetection.DetectionLauncher;
 import org.ignas.frauddetection.probabilitystatistics.domain.CombinationStatistics;
 import org.ignas.frauddetection.probabilitystatistics.domain.GroupTotalStats;
@@ -18,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.google.common.collect.Iterables.getFirst;
 import static com.mongodb.client.model.Filters.*;
 
 public class GroupStatisticsStorage {
@@ -38,7 +36,7 @@ public class GroupStatisticsStorage {
     private MongoCollection<Document> groupStatistics;
 
     public GroupStatisticsStorage(String database, String collection) {
-        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
+        client = MongoClients.create(DetectionLauncher.BAYES_MONGODB_SETTINGS);
 
         groupStatistics = client.getDatabase(database)
             .getCollection(collection);
@@ -47,16 +45,9 @@ public class GroupStatisticsStorage {
     public Future<List<CombinationStatistics>> fetchCombination(List<CombinationStatistics> combinations) {
         Future<List<CombinationStatistics>> loader = Future.future();
 
-        List<Bson> filters = combinations.stream()
-            .map(combination -> and(
-                eq(NAME_FIELD, combination.getGroup()),
-                eq(COMBINATIONS_DOC + "." + CODE_FIELD, combination.getCode()))
-            )
-            .collect(Collectors.toList());
-
         List<CombinationStatistics> statisticsResults = new ArrayList<>();
 
-        groupStatistics.find(Filters.or(filters))
+        groupStatistics.find()
             .projection(Projections.include(NAME_FIELD, COMBINATIONS_DOC))
             .forEach((singleDoc) -> {
                 String groupName = singleDoc.getString(NAME_FIELD);
@@ -95,7 +86,7 @@ public class GroupStatisticsStorage {
         return loader;
     }
 
-    public Future<Map<String, GroupTotalStats>> fetchTotalStats(String transaction) {
+    public Future<Map<String, GroupTotalStats>> fetchTotalStats() {
         long start = System.currentTimeMillis();
 
         Future loader = Future.future();

@@ -25,7 +25,7 @@ public class RequestLogsStorage {
     private AtomicBoolean flushing = new AtomicBoolean(false);
 
     public RequestLogsStorage(String database, String collectionName) {
-        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
+        client = MongoClients.create(DetectionLauncher.TRANSACTIONS_MONGODB_SETTINGS);
 
         evaluations = client.getDatabase(database).getCollection(collectionName);
     }

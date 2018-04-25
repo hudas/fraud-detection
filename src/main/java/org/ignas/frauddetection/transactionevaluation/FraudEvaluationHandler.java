@@ -71,7 +71,6 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
                     historyLoaded.cause().printStackTrace();
                     throw new IllegalStateException(historyLoaded.cause());
                 }
-                System.out.println("FraudEvaluationHandler: Transactions stats: Took:" + (loadEnd - loadStart));
 
                 Map<String, EvaluationResult> evaluationResult =
                     criteriaEvaluator.evaluateAll(transactionData, historyLoaded.result());
@@ -92,12 +91,10 @@ public class FraudEvaluationHandler implements Handler<Message<Object>> {
                 Future<ProbabilityStatistics> probabilityStatistics = criteriaProbabilityIntegration.load(new CriteriaContainer(requestData.getTransactionId(), criteriaValues));
 
                 probabilityStatistics.setHandler(probabilitiesLoaded -> {
-                    long probabilityLoadEnd = System.currentTimeMillis();
                     if (probabilitiesLoaded.failed()) {
                         System.out.println("Failed to load probabilities: " + probabilitiesLoaded.cause().getMessage());
                         throw new IllegalStateException(probabilitiesLoaded.cause());
                     }
-                    System.out.println("FraudEvaluationHandler: Probability stats: Took:" + (probabilityLoadEnd - probabilityLoadStart));
 
                     ProbabilityStatistics statistics = probabilitiesLoaded.result();
 

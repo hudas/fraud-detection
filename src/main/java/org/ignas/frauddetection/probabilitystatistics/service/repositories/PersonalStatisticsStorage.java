@@ -48,7 +48,7 @@ public class PersonalStatisticsStorage {
     private MongoCollection<Document> personalStatistics;
 
     public PersonalStatisticsStorage(String database) {
-        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
+        client = MongoClients.create(DetectionLauncher.TRANSACTIONS_MONGODB_SETTINGS);
 
         personalStatistics = client.getDatabase(database)
             .getCollection("personalStatistics");

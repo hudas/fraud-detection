@@ -47,7 +47,7 @@ public class CriteriaProbabilitiesHandler implements Handler<Message<Object>> {
 
         Future<GeneralOccurrences> generalLoader = generalProbabilitiesStorage.fetch();
         Future<List<CriteriaStatistics>> criteriaLoader = criteriaStorage.fetchStatistics(request.getCriteriaValues());
-        Future<Map<String, GroupTotalStats>> groupLoader = groupStatisticsStorage.fetchTotalStats(request.getTransactionId());
+        Future<Map<String, GroupTotalStats>> groupLoader = groupStatisticsStorage.fetchTotalStats();
 
 
 

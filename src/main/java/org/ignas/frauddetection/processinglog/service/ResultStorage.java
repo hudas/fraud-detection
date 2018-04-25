@@ -9,7 +9,6 @@ import com.mongodb.client.model.InsertOneModel;
 import io.vertx.core.Future;
 import org.bson.Document;
 import org.ignas.frauddetection.DetectionLauncher;
-import org.ignas.frauddetection.probabilitystatistics.domain.CombinationStatistics;
 import org.ignas.frauddetection.shared.Location;
 import org.ignas.frauddetection.transactionevaluation.api.request.BehaviourData;
 import org.ignas.frauddetection.transactionevaluation.api.request.LearningRequest;
@@ -47,7 +46,7 @@ public class ResultStorage {
     private MongoCollection<Document> resultCollection;
 
     public ResultStorage(String database, String collection) {
-        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
+        client = MongoClients.create(DetectionLauncher.TRANSACTIONS_MONGODB_SETTINGS);
 
         resultCollection = client.getDatabase(database)
             .getCollection(collection);

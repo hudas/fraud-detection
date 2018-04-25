@@ -16,7 +16,7 @@ public class GeneralProbabilitiesStorage {
     private MongoCollection<Document> generalProbabilities;
 
     public GeneralProbabilitiesStorage(String database, String collection) {
-        client = MongoClients.create(DetectionLauncher.MONGODB_SETTINGS);
+        client = MongoClients.create(DetectionLauncher.BAYES_MONGODB_SETTINGS);
 
         generalProbabilities = client.getDatabase(database)
             .getCollection(collection);

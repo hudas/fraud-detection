@@ -171,6 +171,7 @@ public class PublicPeriodicStatisticsUpdater extends AbstractVerticle {
                         });
 
                 });
+//            bus.publish("transaction-processing.public-periodic-data-updated", batch);
         });
     }
 
