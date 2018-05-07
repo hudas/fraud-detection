@@ -6,6 +6,8 @@ Proof of concept fraud detection based on Bayesian inference
 
 ## Running the app
 
+Mongo DB local instance running on default port is required in order to run application.
+
 Application is built using [Gradle](https://gradle.org/ ) build tool, therefore easiest way to run the application is running gradle run task in root application folder:
 
 ```
