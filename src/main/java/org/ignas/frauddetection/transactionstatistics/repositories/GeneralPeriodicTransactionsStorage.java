@@ -149,7 +149,6 @@ public class GeneralPeriodicTransactionsStorage {
     public Future<PeriodicGeneralStats> fetchPeriodicStats() {
         if (CACHE != null && CACHED_AT != null
             && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 <= DetectionLauncher.CACHE_TTL) {
-            System.out.println("GeneralPeriodicTransactionsStorage.fetchPeriodicStats Returns from cache.");
             return Future.succeededFuture(CACHE);
         }
 
@@ -181,7 +180,6 @@ public class GeneralPeriodicTransactionsStorage {
 
                     CACHE = generalStats;
                     CACHED_AT = LocalDateTime.now();
-                    System.out.println("GeneralPeriodicTransactionsStorage.fetchPeriodicStats Updates cache.");
                     future.complete(generalStats);
             });
 
@@ -324,9 +322,6 @@ public class GeneralPeriodicTransactionsStorage {
                     return;
                 }
 
-                long end = System.currentTimeMillis();
-
-//                System.out.println("GeneralPeriodicTransactionsStorage.fetchValuesBeforeIncrements took: " + (end - start));
                 future.complete(oldValues);
             });
 

@@ -43,8 +43,6 @@ public class CriteriaStorage {
     }
 
     public Future<List<CriteriaStatistics>> fetchValues(List<String> names) {
-        long start = System.currentTimeMillis();
-
 //      Collect filters and join using OR condition, this way preventing multiple roundtrips to DB.
         List<Bson> nameFilters = names.stream()
             .map(name -> Filters.eq("name", name))
@@ -85,8 +83,6 @@ public class CriteriaStorage {
             }
 
             if (cachedResultValues.size() == requestedValues.size()) {
-                System.out.println("CriteriaStorage.fetchStatistics Returns from cache.");
-
                 return Future.succeededFuture(CACHE);
             }
             // If sizes does not match, this means that some value is missing in cache and whole cache will be reloaded.
@@ -135,8 +131,6 @@ public class CriteriaStorage {
 
                     // Caching all response.
                     CACHE = loadedStatistics;
-                    System.out.println("CriteriaStorage.fetchStatistics updates cache.");
-
 
                     List<CriteriaStatistics> requestedResult = new ArrayList<>();
                     for (CriteriaStatistics stats: loadedStatistics) {

@@ -71,7 +71,6 @@ public class GeneralTransactionsStorage {
     public Future<NonPeriodicGeneralStats> fetchNonPeriodicStats() {
         if (CACHE != null && CACHED_AT != null
             && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 <= DetectionLauncher.CACHE_TTL) {
-            System.out.println("GeneralTransactionsStorage.fetchNonPeriodicStats Returns from cache.");
             return Future.succeededFuture(CACHE);
         }
 
@@ -101,7 +100,6 @@ public class GeneralTransactionsStorage {
 
             CACHE = stats;
             CACHED_AT = LocalDateTime.now();
-            System.out.println("GeneralTransactionsStorage.fetchNonPeriodicStats Updating cache.");
             loader.complete(stats);
         });
 

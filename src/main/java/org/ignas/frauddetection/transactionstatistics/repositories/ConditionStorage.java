@@ -141,8 +141,6 @@ public class ConditionStorage {
                 ConditionStats timeStats = buildStats(timeOccurrences, totalStats.getTimeTotal());
                 ConditionStats locationStats = buildStats(locationOccurrences, totalStats.getLocationTotal());
 
-                long end = System.currentTimeMillis();
-//                System.out.println("ConditionStorage.fetchOccurrences took: " + (end - start));
                 future.complete(new ExternalConditions(creditorStats, timeStats, locationStats));
             });
 
@@ -152,7 +150,6 @@ public class ConditionStorage {
     private Future<ConditionTotals> fetchConditionTotals() {
         if (CACHE != null && CACHED_AT != null
             && Seconds.secondsBetween(LocalDateTime.now(), CACHED_AT).getSeconds() * 1000 <= DetectionLauncher.CACHE_TTL) {
-            System.out.println("ConditionStorage.fetchConditionTotals Returning from cache.");
             return Future.succeededFuture(CACHE);
         }
 
@@ -195,7 +192,6 @@ public class ConditionStorage {
 
                 CACHE = totals;
                 CACHED_AT = LocalDateTime.now();
-                System.out.println("ConditionStorage.fetchConditionTotals Updateing cache.");
                 totalsLoader.complete(totals);
             });
         return totalsLoader;
@@ -367,9 +363,6 @@ public class ConditionStorage {
 
             float incrementedOccurences = previousValue.getOccurrences() + increment.getOccurrences();
 
-            if (incrementedOccurences == 0) {
-                System.out.println("FOUND YOU");
-            }
             float incrementedFraudOccurences = previousValue.getFraudOccurrences() + increment.getFraudOccurrences();
             float newRate = incrementedFraudOccurences / incrementedOccurences;
 
